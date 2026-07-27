@@ -16,7 +16,7 @@ int main() {
     Lexer lexer;
     std::vector<Token> tokens = lexer.tokenize("SELECT  ColumnName WHERE 1 = 1");
     for (int index = 0; index < tokens.size(); index++) {
-        logger->log(tablog::DEBUG, "L: " + tokens[index].getLexeme() + " T: " + std::to_string(tokens[index].getType()));
+        logger->log(tablog::DEBUG, "L: " + tokens[index].getLexeme() + " T: " + tokens[index].getTypeAsString());
     }
     
     return 0;

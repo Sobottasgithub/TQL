@@ -19,6 +19,8 @@ namespace tql {
       enum TokenType getType();
       std::string getLexeme();
 
+      std::string getTypeAsString();
+
     private:
       std::string lexeme;
       enum TokenType type;

@@ -13,4 +13,15 @@ namespace tql {
   std::string Token::getLexeme() {
     return this->lexeme;
   }
+
+  std::string Token::getTypeAsString() {
+    switch(this->type) {
+      case TokenType::Atom:
+        return "Atom";
+      case TokenType::Operator:
+        return "Operator";
+      case TokenType::Eof:
+        return "Eof";
+    }
+  }
 }
