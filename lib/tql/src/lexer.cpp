@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace tql {
   Lexer::Lexer() {
@@ -18,7 +19,29 @@ namespace tql {
 
   std::vector<Token> Lexer::tokenize(const std::string query) {
     std::vector<Token> tokens = {};
-    Token token("Hello", TokenType::Atom);
+    int startDelimiter = 0;
+    int endDelimiter = 0;
+
+    for (int index = 0; index < query.size(); index++) {
+      std::string currentChar(1, query[index]);
+      if (currentChar == " " || index == query.size()-1) {
+        endDelimiter = index;
+
+        std::string tokenString = "";
+        if (index == query.size()-1)
+          tokenString = query.substr(startDelimiter, 1);
+        else
+          tokenString = query.substr(startDelimiter, endDelimiter-startDelimiter);
+
+        Token token(tokenString, TokenType::Atom);
+        tokens.push_back(token);
+        
+        startDelimiter = index + 1;
+      }
+    }
+    Token token("", TokenType::Eof);
+    tokens.push_back(token);
+    
     return tokens;
   }
 }

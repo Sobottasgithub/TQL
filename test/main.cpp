@@ -1,6 +1,7 @@
 #include <tablog.h>
 
 #include "lexer.h"
+#include "token.h"
 
 #include <iostream>
 #include <string>
@@ -12,10 +13,11 @@ int main() {
     std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
     logger->configure("TQL-test", true);
 
-    logger->log(tablog::DEBUG, "Hello from TQL");
-
     Lexer lexer;
-    lexer.tokenize("SELECT ColumnName WHERE 1 == 1");
+    std::vector<Token> tokens = lexer.tokenize("SELECT ColumnName WHERE 1 == 1");
+    for (int index = 0; index < tokens.size(); index++) {
+        logger->log(tablog::DEBUG, "L: " + tokens[index].getLexeme() + " T: " + std::to_string(tokens[index].getType()));
+    }
     
     return 0;
 }
