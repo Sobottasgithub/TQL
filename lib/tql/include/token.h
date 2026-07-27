@@ -11,7 +11,10 @@ namespace tql {
     public:
       Token(std::string lexeme, enum TokenType type);
 
-      inline static std::vector<std::string> operators = {"SELECT", "UPDATE", "DELETE", "INSERT", "WHERE", "DISTINCT", "AND", "OR", "NOT", "="};
+      inline static std::vector<std::string> operators = {"SELECT", "UPDATE", "DELETE", "INSERT",
+                                                          "WHERE", "DISTINCT", "AND", "OR", "NOT",
+                                                          "=", "<", ">", "IN", "BETWEEN", "ASC",
+                                                          "DESC", "ORDER", "BY"};
       
       enum TokenType getType();
       std::string getLexeme();
