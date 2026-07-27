@@ -15,6 +15,7 @@ int main() {
     logger->log(tablog::DEBUG, "Hello from TQL");
 
     Lexer lexer;
+    lexer.tokenize("SELECT ColumnName WHERE 1 == 1");
     
     return 0;
 }
