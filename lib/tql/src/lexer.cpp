@@ -37,7 +37,7 @@ namespace tql {
 
         std::string tokenString = "";
         if (index == query.size()-1)
-          tokenString = query.substr(startDelimiter, 1);
+          tokenString = query.substr(startDelimiter, (endDelimiter - startDelimiter) + 1);
         else
           tokenString = query.substr(startDelimiter, endDelimiter-startDelimiter);
 
