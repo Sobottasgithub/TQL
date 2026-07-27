@@ -14,7 +14,7 @@ int main() {
     logger->configure("TQL-test", true);
 
     Lexer lexer;
-    std::vector<Token> tokens = lexer.tokenize("SELECT ColumnName WHERE 1 = 1");
+    std::vector<Token> tokens = lexer.tokenize("SELECT  ColumnName WHERE 1 = 1");
     for (int index = 0; index < tokens.size(); index++) {
         logger->log(tablog::DEBUG, "L: " + tokens[index].getLexeme() + " T: " + std::to_string(tokens[index].getType()));
     }

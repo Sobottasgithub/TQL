@@ -26,6 +26,13 @@ namespace tql {
     for (int index = 0; index < query.size(); index++) {
       std::string currentChar(1, query[index]);
       if (currentChar == " " || index == query.size()-1) {
+        std::string previousChar(1, query[index - 1]);
+        if (index == 0 || previousChar == " " && index != query.size()-1) {
+          startDelimiter = index + 1;
+          this->logger->log(tablog::DEBUG, "Space delimiter skipped at index " + std::to_string(index));
+          continue;
+        }
+        
         endDelimiter = index;
 
         std::string tokenString = "";
