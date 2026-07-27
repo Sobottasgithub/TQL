@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 namespace tql {
   Lexer::Lexer() {
@@ -33,8 +34,13 @@ namespace tql {
         else
           tokenString = query.substr(startDelimiter, endDelimiter-startDelimiter);
 
-        Token token(tokenString, TokenType::Atom);
-        tokens.push_back(token);
+        if (std::find(Token::operators.begin(), Token::operators.end(), tokenString) != Token::operators.end()) {
+          Token token(tokenString, TokenType::Operator);
+          tokens.push_back(token);
+        } else {
+          Token token(tokenString, TokenType::Atom);
+          tokens.push_back(token);
+        }
         
         startDelimiter = index + 1;
       }

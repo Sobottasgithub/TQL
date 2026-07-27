@@ -4,11 +4,15 @@
 #include "token_type.h"
 
 #include <string>
+#include <vector>
 
 namespace tql {
   class Token {
     public:
       Token(std::string lexeme, enum TokenType type);
+
+      inline static std::vector<std::string> operators = {"SELECT", "UPDATE", "DELETE", "INSERT", "WHERE", "DISTINCT", "AND", "OR", "NOT", "="};
+      
       enum TokenType getType();
       std::string getLexeme();
 
