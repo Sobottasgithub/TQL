@@ -1,6 +1,6 @@
 #include "../include/token.h"
 
-namespace tql {
+namespace tql {  
   Token::Token (std::string lexeme, enum TokenType type) {
     this->lexeme = lexeme;
     this->type = type;

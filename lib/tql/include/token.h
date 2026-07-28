@@ -9,6 +9,7 @@
 namespace tql {
   class Token {
     public:
+      Token() {};
       Token(std::string lexeme, enum TokenType type);
 
       inline static std::vector<std::string> operators = {"SELECT", "UPDATE", "DELETE", "INSERT",

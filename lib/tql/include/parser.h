@@ -3,6 +3,7 @@
 
 #include "token.h"
 
+#include <cstddef>
 #include <tablog.h>
 
 #include <vector>
@@ -18,12 +19,13 @@ namespace tql {
       };
       
       Parser();
-      Expression parseTokens(std::vector<Token> tokens);
+      Parser::Expression parse(std::vector<Token> tokens);
       
     private:
       std::shared_ptr<tablog::Tablog> logger;
-      
-      std::tuple<float, float> getOperatorWeights(std::string operatorString);
+
+      Expression parseTokens(std::vector<Token> tokens, int cursor, float minWeight);
+      std::tuple<float, float> getOperatorWeight(std::string operatorString);
   };
 }
 
