@@ -27,12 +27,17 @@ int main() {
     std::string query;
     std::cout << "Please enter a query: ";
     std::getline(std::cin, query);
-        
+
     Lexer lexer;
     std::vector<Token> tokens = lexer.tokenize(query);
-    Parser parser;
-    Parser::Expression expression = parser.parse(tokens);
-    displayExpressionTree(expression);
+
+    for (int index = 0; index < tokens.size(); index++) {
+        std::cout << tokens[index].getLexeme() << " >> " << tokens[index].getTypeAsString() << std::endl;      
+    }
+    
+    // Parser parser;
+    // Parser::Expression expression = parser.parse(tokens);
+    // displayExpressionTree(expression);
     
     return 0;
 }

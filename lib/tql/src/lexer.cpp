@@ -41,8 +41,17 @@ namespace tql {
         else
           tokenString = query.substr(startDelimiter, endDelimiter-startDelimiter);
 
-        if (std::find(Token::operators.begin(), Token::operators.end(), tokenString) != Token::operators.end()) {
+        if (tokenIsInVector(Token::operators, tokenString)) {
           Token token(tokenString, TokenType::Operator);
+          tokens.push_back(token);
+        } else if (tokenIsInVector(Token::dmlOperators, tokenString)) {
+          Token token(tokenString, TokenType::DmlOperator);
+          tokens.push_back(token);
+        } else if (tokenIsInVector(Token::cardinalitiesOperators, tokenString)) {
+          Token token(tokenString, TokenType::CardinalitiesOperator);
+          tokens.push_back(token);
+        } else if (tokenString.compare("FROM") == 0) {
+          Token token(tokenString, TokenType::FromOperator);
           tokens.push_back(token);
         } else {
           Token token(tokenString, TokenType::Atom);
@@ -57,4 +66,12 @@ namespace tql {
     
     return tokens;
   }
+
+  bool Lexer::tokenIsInVector(std::vector<std::string> vector, std::string tokenString) {
+    for (int index; index < vector.size(); index++) {
+      if (vector[index].compare(tokenString) == 0)
+        return true;
+    }  
+    return false;
+  }    
 }

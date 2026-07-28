@@ -17,6 +17,8 @@ namespace tql {
 
     private:
       std::shared_ptr<tablog::Tablog> logger;
+
+      bool tokenIsInVector(std::vector<std::string> vector, std::string tokenString);
   };
 }
 
