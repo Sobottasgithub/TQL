@@ -38,7 +38,6 @@ namespace tql {
         std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
         selectExpression.expressions.push_back(std::get<0>(result));
         cursor = std::get<1>(result);
-                
       } else if (tokenType == TokenType::CountOperator) {
         std::tuple<Parser::Expression, int> result = parseCount(tokens, cursor);
         selectExpression.expressions.push_back(std::get<0>(result));
@@ -62,15 +61,16 @@ namespace tql {
     columnsExpression.token = Token("", TokenType::Columns);
 
     do {
-      if (TokenType::Atom) {
+      if (tokens[cursor].getType() == TokenType::Atom) {
         std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
         columnsExpression.expressions.push_back(std::get<0>(parsedAtom));
         cursor = std::get<1>(parsedAtom);
-      } else if (TokenType::DistinctOperator) {
+      } else if (tokens[cursor].getType() == TokenType::DistinctOperator) {
         std::tuple<Parser::Expression, int> parsedDistinct = parseDistinct(tokens, cursor);
         columnsExpression.expressions.push_back(std::get<0>(parsedDistinct));
         cursor = std::get<1>(parsedDistinct);
       }
+      cursor++; // MAYBE HELPS!
     } while (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme() == ",");
 
     return {columnsExpression, cursor};    
@@ -131,7 +131,39 @@ namespace tql {
     return {distinctExpression, cursor};
   }
   
-  std::tuple<Parser::Expression, int> Parser::parseCount(std::vector<Token> tokens, int cursor) {}
+  std::tuple<Parser::Expression, int> Parser::parseCount(std::vector<Token> tokens, int cursor) {
+    Expression countExpression;
+
+    if (tokens[cursor].getType() == TokenType::CountOperator) {
+      countExpression.token = tokens[cursor];
+
+      // INFO: Delimiters are not added to parser tree
+      cursor++;
+      if (tokens[cursor].getType() != TokenType::Delimiter && tokens[cursor].getLexeme().compare("(") != 0) {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: '(' !");
+      }
+
+      cursor++;
+      if (tokens[cursor].getType() == TokenType::Atom || tokens[cursor].getType() == TokenType::DistinctOperator) {
+        std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
+        countExpression.expressions.push_back(std::get<0>(result));
+        cursor = std::get<1>(result);
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Count expected atom or distinct!");
+      }
+
+      cursor++;
+      if (tokens[cursor].getType() != TokenType::Delimiter && tokens[cursor].getLexeme().compare(")") != 0) {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
+      }
+    } else {
+      this->logger->log(tablog::ERROR, "Bad Token! Expected Count!");
+    }
+
+
+
+    return {countExpression, cursor};
+  }
   
   std::tuple<Parser::Expression, int> Parser::parseFrom(std::vector<Token> tokens, int cursor) {
     Expression fromExpression;

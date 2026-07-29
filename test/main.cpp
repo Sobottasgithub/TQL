@@ -17,10 +17,10 @@ void displayExpressionTree(Parser::Expression expression) {
     if (expression.expressions.size() >= 1)
         displayExpressionTree(expression.expressions[0]);
         
-    logger->log(tablog::DEBUG, expression.token.getLexeme());
+    logger->log(tablog::DEBUG, expression.token.getTypeAsString());
 
     if (expression.expressions.size() >= 2)
-        displayExpressionTree(expression.expressions[0]);
+        displayExpressionTree(expression.expressions[1]);
 }
 
 int main() {
@@ -31,13 +31,13 @@ int main() {
     Lexer lexer;
     std::vector<Token> tokens = lexer.tokenize(query);
 
-    for (int index = 0; index < tokens.size(); index++) {
-        std::cout << tokens[index].getLexeme() << " >> " << tokens[index].getTypeAsString() << std::endl;      
-    }
+    // for (int index = 0; index < tokens.size(); index++) {
+    //     std::cout << tokens[index].getLexeme() << " >> " << tokens[index].getTypeAsString() << std::endl;      
+    // }
     
-    // Parser parser;
-    // Parser::Expression expression = parser.parse(tokens);
-    // displayExpressionTree(expression);
+    Parser parser;
+    Parser::Expression expression = parser.parse(tokens);
+    displayExpressionTree(expression);
     
     return 0;
 }
