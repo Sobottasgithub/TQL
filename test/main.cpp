@@ -3,6 +3,7 @@
 #include "lexer.h"
 #include "token.h"
 #include "parser.h"
+#include "token_type.h"
 
 #include <iostream>
 #include <string>
@@ -14,13 +15,22 @@ void displayExpressionTree(Parser::Expression expression) {
     logger->configure("ExpressionTree", true);
 
     // Post order
-    if (expression.expressions.size() >= 1) // Left side
-        displayExpressionTree(expression.expressions[0]);
+    if (expression.token.getType() == TokenType::Columns) {
+        for (int index = 0; index < expression.expressions.size(); index++) {
+            displayExpressionTree(expression.expressions[index]);
+        }
+    } else {
+        if (expression.expressions.size() >= 1) // Left side
+            displayExpressionTree(expression.expressions[0]);
 
-    if (expression.expressions.size() >= 2) // Right side
-        displayExpressionTree(expression.expressions[1]);
+        if (expression.expressions.size() >= 2) // Right side
+            displayExpressionTree(expression.expressions[1]);
+    }
 
-    logger->log(tablog::DEBUG, expression.token.getTypeAsString());
+    if (expression.token.getType() == TokenType::Atom)
+        logger->log(tablog::DEBUG, expression.token.getTypeAsString() + " -> " + expression.token.getLexeme());
+    else
+        logger->log(tablog::DEBUG, expression.token.getTypeAsString());
 
 }
 
