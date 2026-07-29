@@ -81,6 +81,8 @@ namespace tql {
 
     if (tokens[cursor].getType() == TokenType::Atom) {
         atomExpression.token = tokens[cursor];
+    } else {
+      this->logger->log(tablog::ERROR, "Bad Token! Expected Atom!");
     }
 
     if (tokens[cursor + 1].getType() == TokenType::AsOperator) {
@@ -90,14 +92,45 @@ namespace tql {
       cursor = std::get<1>(parsedAs);
     }
 
-    return {atomExpression, cursor};    
+    return {atomExpression, cursor};
   }
 
   std::tuple<Parser::Expression, int> Parser::parseAs(std::vector<Token> tokens, int cursor) {
-    
+    Expression asExpression;
+
+    if (tokens[cursor].getType() == TokenType::AsOperator) {
+      asExpression.token = tokens[cursor];
+      cursor++;
+      
+      std::tuple<Parser::Expression, int> parsedAs = parseAtom(tokens, cursor);
+      asExpression.expressions.push_back(std::get<0>(parsedAs));
+      cursor = std::get<1>(parsedAs);
+    }
+
+    return {asExpression, cursor};
   }
   
-  std::tuple<Parser::Expression, int> Parser::parseDistinct(std::vector<Token> tokens, int cursor) {}
+  std::tuple<Parser::Expression, int> Parser::parseDistinct(std::vector<Token> tokens, int cursor) {
+    Expression distinctExpression;
+
+    if (tokens[cursor].getType() == TokenType::DistinctOperator) {
+      distinctExpression.token = tokens[cursor];
+
+      cursor++;
+      if (tokens[cursor].getType() == TokenType::Atom) {
+        std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
+        distinctExpression.expressions.push_back(std::get<0>(parsedAtom));
+        cursor = std::get<1>(parsedAtom);
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected Atom after Distinct operator!");
+      }
+    } else {
+      this->logger->log(tablog::ERROR, "Bad Token! Expected Distinct!");
+    }
+
+    return {distinctExpression, cursor};
+  }
+  
   std::tuple<Parser::Expression, int> Parser::parseCount(std::vector<Token> tokens, int cursor) {}
   std::tuple<Parser::Expression, int> Parser::parseFrom(std::vector<Token> tokens, int cursor) {}
 
