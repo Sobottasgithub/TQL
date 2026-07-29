@@ -43,11 +43,12 @@ namespace tql {
         selectExpression.expressions.push_back(std::get<0>(result));
         cursor = std::get<1>(result);
       } else {
-            this->logger->log(tablog::ERROR, "Bad Token! Expected atom or distinct operator!");
+        this->logger->log(tablog::ERROR, "Bad Token! Expected atom or distinct operator!");
       }
 
-      cursor++;
-      parseFrom(tokens, cursor);
+      std::tuple<Parser::Expression, int> fromResult = parseFrom(tokens, cursor);
+      selectExpression.expressions.push_back(std::get<0>(fromResult));
+      cursor = std::get<1>(fromResult);
 
       return {selectExpression, cursor};
     } else {
