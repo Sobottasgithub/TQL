@@ -13,14 +13,15 @@ void displayExpressionTree(Parser::Expression expression) {
     std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
     logger->configure("ExpressionTree", true);
 
-    // In order
-    if (expression.expressions.size() >= 1)
+    // Post order
+    if (expression.expressions.size() >= 1) // Left side
         displayExpressionTree(expression.expressions[0]);
-        
+
+    if (expression.expressions.size() >= 2) // Right side
+        displayExpressionTree(expression.expressions[1]);
+
     logger->log(tablog::DEBUG, expression.token.getTypeAsString());
 
-    if (expression.expressions.size() >= 2)
-        displayExpressionTree(expression.expressions[1]);
 }
 
 int main() {

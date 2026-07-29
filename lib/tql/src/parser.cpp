@@ -61,6 +61,9 @@ namespace tql {
     columnsExpression.token = Token("", TokenType::Columns);
 
     do {
+      if (tokens[cursor].getLexeme().compare(",") == 0)
+        cursor++;
+      
       if (tokens[cursor].getType() == TokenType::Atom) {
         std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
         columnsExpression.expressions.push_back(std::get<0>(parsedAtom));
@@ -70,9 +73,9 @@ namespace tql {
         columnsExpression.expressions.push_back(std::get<0>(parsedDistinct));
         cursor = std::get<1>(parsedDistinct);
       }
-      cursor++; // MAYBE HELPS!
-    } while (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme() == ",");
-
+      cursor++;
+    } while (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme().compare(",") == 0);
+    
     return {columnsExpression, cursor};    
   }
 
