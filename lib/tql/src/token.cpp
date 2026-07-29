@@ -18,6 +18,10 @@ namespace tql {
     switch(this->type) {
       case TokenType::Atom:
         return "Atom";
+      case TokenType::Columns:
+        return "Columns";
+      case TokenType::Delimiter:
+        return "Delimiter";
       case TokenType::SelectOperator:
         return "SelectOperator";
       case TokenType::CountOperator:

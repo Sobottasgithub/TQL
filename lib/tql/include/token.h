@@ -15,7 +15,8 @@ namespace tql {
       inline static std::vector<std::string> operators = {"WHERE", "AND", "OR", "NOT",
                                                           "=", "<", ">", "IN", "BETWEEN", "ASC",
                                                           "DESC", "ORDER", "BY"};
-                                                                
+      inline static std::vector<std::string> delimiters = {",", "(", ")"};
+                                 
       enum TokenType getType();
       std::string getLexeme();
 

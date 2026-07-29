@@ -4,7 +4,9 @@
 namespace tql {
   enum TokenType {
     Atom,
-
+    Columns,
+    Delimiter,
+    
     // DML operators
     SelectOperator,
 

@@ -41,6 +41,15 @@ namespace tql {
         else
           tokenString = query.substr(startDelimiter, endDelimiter-startDelimiter);
 
+        // check lastCharacter for delimiter
+        Token delimiterToken("", TokenType::Delimiter);
+        std::string lastCharacter(1, tokenString.at(tokenString.length() - 1));
+        if (tokenIsInVector(Token::delimiters, lastCharacter)) {
+          Token newDelimiterToken(lastCharacter, TokenType::Delimiter);
+          delimiterToken = newDelimiterToken;
+          tokenString = tokenString.substr(0, tokenString.length() - 1);
+        }
+
         if (tokenIsInVector(Token::operators, tokenString)) {
           Token token(tokenString, TokenType::Operator);
           tokens.push_back(token);
@@ -59,9 +68,15 @@ namespace tql {
         } else if (tokenString.compare("FROM") == 0) {
           Token token(tokenString, TokenType::FromOperator);
           tokens.push_back(token);
-        } else {
+        } else if (tokenString.compare("") != 0){
           Token token(tokenString, TokenType::Atom);
           tokens.push_back(token);
+        } else {
+          this->logger->log(tablog::CRITICAL, "Empty token!");
+        }
+
+        if (delimiterToken.getLexeme() != "") {
+          tokens.push_back(delimiterToken);
         }
         
         startDelimiter = index + 1;
