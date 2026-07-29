@@ -61,12 +61,42 @@ namespace tql {
     Expression columnsExpression;
     columnsExpression.token = Token("", TokenType::Columns);
 
-    int currentTokenType = tokens[cursor].getType();
-
+    do {
+      if (TokenType::Atom) {
+        std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
+        columnsExpression.expressions.push_back(std::get<0>(parsedAtom));
+        cursor = std::get<1>(parsedAtom);
+      } else if (TokenType::DistinctOperator) {
+        std::tuple<Parser::Expression, int> parsedDistinct = parseDistinct(tokens, cursor);
+        columnsExpression.expressions.push_back(std::get<0>(parsedDistinct));
+        cursor = std::get<1>(parsedDistinct);
+      }
+    } while (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme() == ",");
 
     return {columnsExpression, cursor};    
   }
 
+  std::tuple<Parser::Expression, int> Parser::parseAtom(std::vector<Token> tokens, int cursor) {
+    Expression atomExpression;
+
+    if (tokens[cursor].getType() == TokenType::Atom) {
+        atomExpression.token = tokens[cursor];
+    }
+
+    if (tokens[cursor + 1].getType() == TokenType::AsOperator) {
+      cursor++;
+      std::tuple<Parser::Expression, int> parsedAs = parseAs(tokens, cursor);
+      atomExpression.expressions.push_back(std::get<0>(parsedAs));
+      cursor = std::get<1>(parsedAs);
+    }
+
+    return {atomExpression, cursor};    
+  }
+
+  std::tuple<Parser::Expression, int> Parser::parseAs(std::vector<Token> tokens, int cursor) {
+    
+  }
+  
   std::tuple<Parser::Expression, int> Parser::parseDistinct(std::vector<Token> tokens, int cursor) {}
   std::tuple<Parser::Expression, int> Parser::parseCount(std::vector<Token> tokens, int cursor) {}
   std::tuple<Parser::Expression, int> Parser::parseFrom(std::vector<Token> tokens, int cursor) {}
