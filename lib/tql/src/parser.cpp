@@ -132,6 +132,21 @@ namespace tql {
   }
   
   std::tuple<Parser::Expression, int> Parser::parseCount(std::vector<Token> tokens, int cursor) {}
-  std::tuple<Parser::Expression, int> Parser::parseFrom(std::vector<Token> tokens, int cursor) {}
+  
+  std::tuple<Parser::Expression, int> Parser::parseFrom(std::vector<Token> tokens, int cursor) {
+    Expression fromExpression;
 
+    if (tokens[cursor].getType() == TokenType::FromOperator) {
+      fromExpression.token = tokens[cursor];
+      cursor++;
+      if (tokens[cursor].getType() == TokenType::Atom) {
+        std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
+        fromExpression.expressions.push_back(std::get<0>(parsedAtom));
+        cursor = std::get<1>(parsedAtom);
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected Atom after From operator!");
+      }
+    }
+    return {fromExpression, cursor};
+  }
 }
