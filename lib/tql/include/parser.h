@@ -24,8 +24,12 @@ namespace tql {
     private:
       std::shared_ptr<tablog::Tablog> logger;
 
-      Expression parseTokens(std::vector<Token> tokens, int cursor, float minWeight);
-      std::tuple<float, float> getOperatorWeight(std::string operatorString);
+      Expression parseTokens(std::vector<Token> tokens, int cursor);
+      std::tuple<Expression, int> parseSelect(std::vector<Token> tokens, int cursor);
+      std::tuple<Expression, int> parseColumns(std::vector<Token> tokens, int cursor);
+      std::tuple<Expression, int> parseDistinct(std::vector<Token> tokens, int cursor);
+      std::tuple<Expression, int> parseCount(std::vector<Token> tokens, int cursor);
+      std::tuple<Expression, int> parseFrom(std::vector<Token> tokens, int cursor);
   };
 }
 
