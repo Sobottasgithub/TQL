@@ -4,8 +4,15 @@
 namespace tql {
   enum TokenType {
     Atom,
-    DmlOperator,
-    CardinalitiesOperator,
+
+    // DML operators
+    SelectOperator,
+
+    // CardinaltiesOperator
+    DistinctOperator,
+    CountOperator,
+    AsOperator,
+    
     FromOperator,
     Operator,
     Eof

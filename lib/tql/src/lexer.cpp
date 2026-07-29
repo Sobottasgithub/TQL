@@ -44,11 +44,17 @@ namespace tql {
         if (tokenIsInVector(Token::operators, tokenString)) {
           Token token(tokenString, TokenType::Operator);
           tokens.push_back(token);
-        } else if (tokenIsInVector(Token::dmlOperators, tokenString)) {
-          Token token(tokenString, TokenType::DmlOperator);
+        } else if (tokenString.compare("SELECT") == 0) {
+          Token token(tokenString, TokenType::SelectOperator);
           tokens.push_back(token);
-        } else if (tokenIsInVector(Token::cardinalitiesOperators, tokenString)) {
-          Token token(tokenString, TokenType::CardinalitiesOperator);
+        } else if (tokenString.compare("DISTINCT") == 0) {
+          Token token(tokenString, TokenType::DistinctOperator);
+          tokens.push_back(token);
+        } else if (tokenString.compare("COUNT") == 0) {
+          Token token(tokenString, TokenType::CountOperator);
+          tokens.push_back(token);
+        } else if (tokenString.compare("AS") == 0) {
+          Token token(tokenString, TokenType::AsOperator);
           tokens.push_back(token);
         } else if (tokenString.compare("FROM") == 0) {
           Token token(tokenString, TokenType::FromOperator);
