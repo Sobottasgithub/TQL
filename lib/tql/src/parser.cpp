@@ -164,8 +164,6 @@ namespace tql {
       this->logger->log(tablog::ERROR, "Bad Token! Expected Count!");
     }
 
-
-
     return {countExpression, cursor};
   }
   
@@ -179,8 +177,22 @@ namespace tql {
         std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
         fromExpression.expressions.push_back(std::get<0>(parsedAtom));
         cursor = std::get<1>(parsedAtom);
+      } else if (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme().compare("(") == 0) {
+          cursor++;
+          if (tokens[cursor].getType() == TokenType::SelectOperator) {
+            std::tuple<Parser::Expression, int> selectResult = parseSelect(tokens, cursor);
+            fromExpression.expressions.push_back(std::get<0>(selectResult));
+            cursor = std::get<1>(selectResult);
+
+            cursor++;
+            if (tokens[cursor].getLexeme().compare(")") != 0) {
+              this->logger->log(tablog::ERROR, "Bad Token! Expected closing Delimiter after Select operator in From operation!");
+            }
+          } else {
+            this->logger->log(tablog::ERROR, "Bad Token! Expected Select operator after Delimiter!");
+          }
       } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected Atom after From operator!");
+        this->logger->log(tablog::ERROR, "Bad Token! Expected Atom or Delimiter after From operator!");
       }
     }
     return {fromExpression, cursor};
