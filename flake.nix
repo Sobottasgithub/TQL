@@ -28,6 +28,7 @@
         gcc
         gnumake
         libtablog
+        arrow-cpp
       ];
 
       mkTQLPackage =
