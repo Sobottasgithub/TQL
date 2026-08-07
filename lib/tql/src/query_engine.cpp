@@ -3,14 +3,13 @@
 #include "../include/token.h"
 #include "../include/token_type.h"
 #include "../include/parser.h"
+#include "../include/interpreter.h"
 
 #include <string>
 #include <vector>
 
 namespace tql {
-  QueryEngine::QueryEngine() {
-    
-  }
+  QueryEngine::QueryEngine() {}
 
   void QueryEngine::execute(std::string query) {
     std::vector<Token> tokens = this->lexer.tokenize(query);
@@ -20,10 +19,12 @@ namespace tql {
     //     std::cout << tokens[index].getLexeme() << " >> " << tokens[index].getTypeAsString() << std::endl;      
     // }
 
-    Parser::Expression expression = this->parser.parse(tokens);
+    Parser::Expression expressionTree = this->parser.parse(tokens);
 
     // DEBUG: Display expression Tree:
-    displayExpressionTree(expression);
+    displayExpressionTree(expressionTree);
+
+    this->interpreter.interpret(expressionTree);
   }
 
   void QueryEngine::displayExpressionTree(Parser::Expression expression) {

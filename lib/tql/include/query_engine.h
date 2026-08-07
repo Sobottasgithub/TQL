@@ -5,6 +5,7 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "interpreter.h"
 
 namespace tql {
   class QueryEngine {
@@ -14,9 +15,11 @@ namespace tql {
       void execute(std::string query);
 
       void displayExpressionTree(Parser::Expression expression);
+      
     private:
       Lexer lexer;
       Parser parser;
+      Interpreter interpreter;
   };
 }
 
