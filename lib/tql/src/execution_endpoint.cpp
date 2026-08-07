@@ -1,0 +1,51 @@
+#include "../include/execution_endpoint.h"
+
+#include <tablog.h>
+#include <filesystem>
+#include <memory>
+#include <arrow/table.h>
+#include <arrow/csv/api.h>
+#include <arrow/io/api.h>
+
+namespace tql {
+  ExecutionEndpoint::ExecutionEndpoint() {
+    std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
+    logger->configure("ExecutionEndpoint", true);
+    this->logger = logger;
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::openFile(std::string filePath) {
+    if (std::filesystem::exists(filePath)) {
+      arrow::io::IOContext ioContext = arrow::io::default_io_context();
+
+      arrow::Result<std::shared_ptr<arrow::io::ReadableFile>> maybeFile = arrow::io::ReadableFile::Open(filePath);
+      std::shared_ptr<arrow::io::InputStream> fileInput = *maybeFile;
+
+      arrow::csv::ReadOptions readOptions = arrow::csv::ReadOptions::Defaults();
+      arrow::csv::ParseOptions parseOptions = arrow::csv::ParseOptions::Defaults();
+      arrow::csv::ConvertOptions convertOptions = arrow::csv::ConvertOptions::Defaults();
+
+      arrow::Result<std::shared_ptr<arrow::csv::TableReader>> maybeReader = arrow::csv::TableReader::Make(ioContext,
+                                                      fileInput,
+                                                      readOptions,
+                                                      parseOptions,
+                                                      convertOptions);
+      if (!maybeReader.ok()) {
+        this->logger->log(tablog::CRITICAL, "Error while instantiating TableReader!");
+        throw "Error while instantiating TableReader!";
+      }
+      std::shared_ptr<arrow::csv::TableReader> reader = *maybeReader;
+
+      arrow::Result<std::shared_ptr<arrow::Table>> maybeTable = reader->Read();
+      if (!maybeTable.ok()) {
+        this->logger->log(tablog::CRITICAL, "Error while read table from CSV file!");
+        throw "Error while read table from CSV file!";
+      }
+      std::shared_ptr<arrow::Table> table = *maybeTable;
+      return table;
+    } else {
+      throw std::invalid_argument( "Invalid filepath!" );
+      return nullptr;
+    }
+  }
+}
