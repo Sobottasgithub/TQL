@@ -36,11 +36,11 @@ namespace tql {
               displayExpressionTree(expression.expressions[index]);
           }
       } else {
-          if (expression.expressions.size() >= 1) // Left side
-              displayExpressionTree(expression.expressions[0]);
-
           if (expression.expressions.size() >= 2) // Right side
               displayExpressionTree(expression.expressions[1]);
+          
+          if (expression.expressions.size() >= 1) // Left side
+              displayExpressionTree(expression.expressions[0]);
       }
 
       if (expression.token.getType() == TokenType::Atom)
