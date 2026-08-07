@@ -6,6 +6,7 @@
 #include <arrow/table.h>
 #include <arrow/csv/api.h>
 #include <arrow/io/api.h>
+#include <arrow/csv/options.h>
 
 namespace tql {
   ExecutionEndpoint::ExecutionEndpoint() {

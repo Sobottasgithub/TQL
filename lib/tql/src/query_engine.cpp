@@ -4,14 +4,23 @@
 #include "../include/token_type.h"
 #include "../include/parser.h"
 #include "../include/interpreter.h"
+#include "../include/execution_endpoint.h"
 
 #include <string>
 #include <vector>
+#include <memory>
+#include <arrow/table.h>
 
 namespace tql {
-  QueryEngine::QueryEngine() {}
+  QueryEngine::QueryEngine() {
+    ExecutionEndpoint executionEndpoint;
+      
+    this->interpreter.setOpenFile([&executionEndpoint](std::string filePath) {
+        return executionEndpoint.openFile(filePath);
+    });
+  }
 
-  void QueryEngine::execute(std::string query) {
+  std::shared_ptr<arrow::Table> QueryEngine::execute(std::string query) {
     std::vector<Token> tokens = this->lexer.tokenize(query);
 
     // DEBUG: Display lexer output:
@@ -24,7 +33,7 @@ namespace tql {
     // DEBUG: Display expression Tree:
     displayExpressionTree(expressionTree);
 
-    this->interpreter.interpret(expressionTree);
+    return this->interpreter.interpret(expressionTree);
   }
 
   void QueryEngine::displayExpressionTree(Parser::Expression expression) {

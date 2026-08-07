@@ -10,5 +10,7 @@ add_executable(tql-test ${SOURCES})
 
 target_link_libraries(tql-test PRIVATE tql)
 target_link_libraries(tql-test PRIVATE tablog)
+find_package(Arrow REQUIRED)
+target_link_libraries(tql-test PRIVATE Arrow::arrow_shared)
 
 install(TARGETS tql-test DESTINATION bin)

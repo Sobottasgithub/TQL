@@ -2,6 +2,8 @@
 #define QUERY_ENGINE_H
 
 #include <string>
+#include <memory>
+#include <arrow/table.h>
 
 #include "lexer.h"
 #include "parser.h"
@@ -12,7 +14,7 @@ namespace tql {
     public:
       QueryEngine();
 
-      void execute(std::string query);
+      std::shared_ptr<arrow::Table> execute(std::string query);
 
       void displayExpressionTree(Parser::Expression expression);
       
