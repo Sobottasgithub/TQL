@@ -18,7 +18,7 @@ namespace tql {
     this->logger = logger;
   }
 
-  std::vector<Token> Lexer::tokenize(const std::string query) {
+  void Lexer::tokenize(const std::string query) {
     std::vector<Token> tokens = {};
     int startDelimiter = 0;
     int endDelimiter = 0;
@@ -91,7 +91,24 @@ namespace tql {
     Token token("", TokenType::Eof);
     tokens.push_back(token);
     
-    return tokens;
+    this->tokens = tokens;
+  }
+
+  Token Lexer::peek() {
+    if (this->tokens.size() > 0) {
+      return this->tokens.at(0);
+    }
+    return Token();
+  }
+
+  Token Lexer::next() {
+    if (this->tokens.size() > 0) {
+      Token firstToken = this->tokens.at(0);
+      this->tokens.erase(this->tokens.begin());
+      return firstToken;
+    }
+    return Token();
+
   }
 
   bool Lexer::tokenIsInVector(std::vector<std::string> vector, std::string tokenString) {

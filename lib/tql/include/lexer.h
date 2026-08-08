@@ -13,10 +13,15 @@ namespace tql {
   class Lexer {
     public:
       Lexer();
-      std::vector<Token> tokenize(const std::string query);
+      void tokenize(const std::string query);
+      
+      Token peek();
+      Token next();
 
     private:
       std::shared_ptr<tablog::Tablog> logger;
+
+      std::vector<Token> tokens;
 
       bool tokenIsInVector(std::vector<std::string> vector, std::string tokenString);
   };
