@@ -39,16 +39,40 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> Interpreter::interpretSelect(Parser::Expression expression) {
+    std::shared_ptr<arrow::Table> resultTable;
+
+    // INFO: Interpret FROM
     std::optional<Parser::Expression> optionalFromExpression = getExpressionByTokenType(TokenType::FromOperator, expression.expressions);
     if (optionalFromExpression.has_value()) {
       Parser::Expression fromExpression = optionalFromExpression.value();
-
-      // TODO: CHANGE THIS LATER AS MORE FUNCTIONS GET IMPLEMENTED!!!!
-      return interpretFrom(fromExpression);
+      resultTable = interpretFrom(fromExpression);
     } else {
       this->logger->log(tablog::CRITICAL, "Missing From expression!");
       throw "Missing From expression!";
     }
+
+    //TODO: Interpret all the other functions
+    
+
+    // INFO: Interpret SELECT
+    std::optional<Parser::Expression> optionalAllExpression = getExpressionByTokenType(TokenType::All, expression.expressions);
+    if (!optionalAllExpression.has_value()) { // The all expression doesnt alter the table
+      std::optional<Parser::Expression> optionalColumnsExpression = getExpressionByTokenType(TokenType::Columns, expression.expressions);
+      std::optional<Parser::Expression> optionalCountExpression = getExpressionByTokenType(TokenType::CountOperator, expression.expressions);
+    
+      if (optionalColumnsExpression.has_value()) {
+        Parser::Expression columnsExpression = optionalColumnsExpression.value();
+      
+      } else if (optionalColumnsExpression.has_value()) {
+        Parser::Expression countExpression = optionalCountExpression.value();
+      
+      } else {
+        this->logger->log(tablog::CRITICAL, "Missing columns or aggregate expression!");
+        throw "Missing columns or aggregate expression!";
+      }
+    }
+
+    return resultTable;
   }
 
   std::shared_ptr<arrow::Table> Interpreter::interpretFrom(Parser::Expression expression) {

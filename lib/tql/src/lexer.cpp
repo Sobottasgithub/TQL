@@ -5,11 +5,9 @@
 
 #include <tablog.h>
 
-#include <iostream>
 #include <memory>
 #include <vector>
 #include <string>
-#include <algorithm>
 
 namespace tql {
   Lexer::Lexer() {
