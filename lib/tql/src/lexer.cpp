@@ -78,7 +78,7 @@ namespace tql {
           Token token(tokenString, TokenType::Atom);
           tokens.push_back(token);
         } else {
-          this->logger->log(tablog::CRITICAL, "Empty token!");
+          this->logger->log(tablog::INFO, "Empty token!");
         }
 
         if (delimiterToken.getLexeme() != "") {
