@@ -22,6 +22,10 @@ namespace tql {
     this->interpreter.setSelectColumns([&executionEndpoint](std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
         return executionEndpoint.selectColumns(columnNames, table);
     });
+
+    this->interpreter.setGetDistinct([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getDistinct(table);
+    });
   }
 
   std::shared_ptr<arrow::Table> QueryEngine::execute(std::string query) {

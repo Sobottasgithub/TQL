@@ -34,6 +34,10 @@ namespace tql {
     this->selectColumns = selectColumns;
   }
 
+  void Interpreter::setGetDistinct(GetDistinct getDistinct) {
+    this->getDistinct = getDistinct;
+  }
+
   std::shared_ptr<arrow::Table> Interpreter::interpret(Parser::Expression expressionTree) {
     if (expressionTree.token.getType() == TokenType::SelectOperator) {
       return interpretSelect(expressionTree);
@@ -77,6 +81,12 @@ namespace tql {
       }
     }
 
+    // INFO: Interpret DISTINCT
+    std::optional<Parser::Expression> optionalDistinctExpression = getExpressionByTokenType(TokenType::DistinctOperator, expression.expressions);
+    if (optionalDistinctExpression.has_value()) {
+      resultTable = this->getDistinct(resultTable);
+    }
+
     return resultTable;
   }
 
@@ -103,6 +113,10 @@ namespace tql {
     }
 
     return this->selectColumns(columnNames, table);
+  }
+
+  std::shared_ptr<arrow::Table> Interpreter::interpretDistinct(std::shared_ptr<arrow::Table> table) {
+    return this->getDistinct(table);
   }
 
   std::optional<Parser::Expression> Interpreter::getExpressionByTokenType(TokenType requestedTokenType, std::vector<Parser::Expression> expressions) {

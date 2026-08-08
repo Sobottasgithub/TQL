@@ -17,7 +17,11 @@ target_include_directories(tql PUBLIC
 
 target_link_libraries(tql PRIVATE tablog)
 find_package(Arrow REQUIRED)
-target_link_libraries(tql PRIVATE Arrow::arrow_shared)
+find_package(ArrowAcero REQUIRED)
+target_link_libraries(tql PRIVATE
+    Arrow::arrow_shared
+    ArrowAcero::arrow_acero_shared
+)
 
 install(TARGETS tql DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include)

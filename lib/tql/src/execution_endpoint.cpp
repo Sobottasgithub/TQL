@@ -6,7 +6,12 @@
 #include <arrow/table.h>
 #include <arrow/csv/api.h>
 #include <arrow/io/api.h>
+#include <arrow/api.h>
 #include <arrow/csv/options.h>
+#include <arrow/acero/exec_plan.h>
+#include <arrow/acero/options.h>
+#include <arrow/compute/api.h>
+#include <arrow/acero/util.h>
 
 namespace tql {
   ExecutionEndpoint::ExecutionEndpoint() {
@@ -65,5 +70,9 @@ namespace tql {
     if (resultTable.ok())
       return std::move(resultTable.ValueOrDie());
     return nullptr;
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getDistinct(std::shared_ptr<arrow::Table> table) {
+    throw "Corrupt result table when calculating distinct";
   }
 }

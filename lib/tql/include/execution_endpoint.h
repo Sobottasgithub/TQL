@@ -13,6 +13,7 @@ namespace tql {
 
       std::shared_ptr<arrow::Table> openFile(std::string filePath);
       std::shared_ptr<arrow::Table> selectColumns(std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table);
+      std::shared_ptr<arrow::Table> getDistinct(std::shared_ptr<arrow::Table> table);
 
     private:
       std::shared_ptr<tablog::Tablog> logger;
