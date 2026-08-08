@@ -32,20 +32,34 @@ namespace tql {
     Parser::Expression selectExpression;
     if (tokens[cursor].getType() == TokenType::SelectOperator) {
       selectExpression.token = tokens[cursor];
+      
       cursor++;
-      int tokenType = tokens[cursor].getType();
-      if (tokenType == TokenType::Atom || tokenType == TokenType::DistinctOperator) {
-        std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
-        selectExpression.expressions.push_back(std::get<0>(result));
-        cursor = std::get<1>(result);
-      } else if (tokenType == TokenType::CountOperator) {
-        std::tuple<Parser::Expression, int> result = parseCount(tokens, cursor);
-        selectExpression.expressions.push_back(std::get<0>(result));
-        cursor = std::get<1>(result);
+      if (tokens[cursor].getType() == TokenType::DistinctOperator) {
+        Expression distinctExpression;
+        distinctExpression.token = tokens[cursor];
+        selectExpression.expressions.push_back(distinctExpression);
+        
+        cursor++;
+        if (tokens[cursor].getType() == TokenType::Atom) {
+          std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
+          selectExpression.expressions.push_back(std::get<0>(result));
+          cursor = std::get<1>(result);
+        }
       } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected atom or distinct operator!");
+        int tokenType = tokens[cursor].getType();
+        if (tokenType == TokenType::Atom) {
+          std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
+          selectExpression.expressions.push_back(std::get<0>(result));
+          cursor = std::get<1>(result);
+        } else if (tokenType == TokenType::CountOperator) {
+          std::tuple<Parser::Expression, int> result = parseCount(tokens, cursor);
+          selectExpression.expressions.push_back(std::get<0>(result));
+          cursor = std::get<1>(result);
+        } else {
+          this->logger->log(tablog::ERROR, "Bad Token! Expected atom or count operator!");
+        }
       }
-
+      
       std::tuple<Parser::Expression, int> fromResult = parseFrom(tokens, cursor);
       selectExpression.expressions.push_back(std::get<0>(fromResult));
       cursor = std::get<1>(fromResult);
@@ -69,10 +83,6 @@ namespace tql {
         std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
         columnsExpression.expressions.push_back(std::get<0>(parsedAtom));
         cursor = std::get<1>(parsedAtom);
-      } else if (tokens[cursor].getType() == TokenType::DistinctOperator) {
-        std::tuple<Parser::Expression, int> parsedDistinct = parseDistinct(tokens, cursor);
-        columnsExpression.expressions.push_back(std::get<0>(parsedDistinct));
-        cursor = std::get<1>(parsedDistinct);
       }
       cursor++;
     } while (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme().compare(",") == 0);
@@ -114,27 +124,6 @@ namespace tql {
     return {asExpression, cursor};
   }
   
-  std::tuple<Parser::Expression, int> Parser::parseDistinct(std::vector<Token> tokens, int cursor) {
-    Expression distinctExpression;
-
-    if (tokens[cursor].getType() == TokenType::DistinctOperator) {
-      distinctExpression.token = tokens[cursor];
-
-      cursor++;
-      if (tokens[cursor].getType() == TokenType::Atom) {
-        std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
-        distinctExpression.expressions.push_back(std::get<0>(parsedAtom));
-        cursor = std::get<1>(parsedAtom);
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected Atom after Distinct operator!");
-      }
-    } else {
-      this->logger->log(tablog::ERROR, "Bad Token! Expected Distinct!");
-    }
-
-    return {distinctExpression, cursor};
-  }
-  
   std::tuple<Parser::Expression, int> Parser::parseCount(std::vector<Token> tokens, int cursor) {
     Expression countExpression;
 
@@ -148,12 +137,18 @@ namespace tql {
       }
 
       cursor++;
-      if (tokens[cursor].getType() == TokenType::Atom || tokens[cursor].getType() == TokenType::DistinctOperator) {
+      if (tokens[cursor].getType() == TokenType::DistinctOperator) {
+        Expression distinctExpression;
+        distinctExpression.token = tokens[cursor];
+        cursor++;
+      }
+
+      if (tokens[cursor].getType() == TokenType::Atom) {
         std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
         countExpression.expressions.push_back(std::get<0>(result));
         cursor = std::get<1>(result);
       } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Count expected atom or distinct!");
+        this->logger->log(tablog::ERROR, "Bad Token! Count expected atom!");
       }
 
       cursor++;

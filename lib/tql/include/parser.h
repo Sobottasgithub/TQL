@@ -29,7 +29,6 @@ namespace tql {
       std::tuple<Expression, int> parseColumns(std::vector<Token> tokens, int cursor);
       std::tuple<Expression, int> parseAtom(std::vector<Token> tokens, int cursor);
       std::tuple<Expression, int> parseAs(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseDistinct(std::vector<Token> tokens, int cursor);
       std::tuple<Expression, int> parseCount(std::vector<Token> tokens, int cursor);
       std::tuple<Expression, int> parseFrom(std::vector<Token> tokens, int cursor);
   };
