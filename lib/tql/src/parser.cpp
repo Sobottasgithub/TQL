@@ -6,7 +6,6 @@
 
 #include <tablog.h>
 
-#include <tuple>
 #include <vector>
 #include <memory>
 
@@ -22,6 +21,7 @@ namespace tql {
         return parseSelect(&lexer);
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected token of type Dml!");
+      throw "Bad Token";
     }
   }
 
@@ -44,6 +44,7 @@ namespace tql {
           selectExpression.expressions.push_back(allExpression);
         } else {
           this->logger->log(tablog::ERROR, "Bad Token! Expected atom or *!");
+          throw "Bad Token";
         }
       } else {
         int tokenType = lexer->peek().getType();
@@ -59,6 +60,7 @@ namespace tql {
           selectExpression.expressions.push_back(result);
         } else {
           this->logger->log(tablog::ERROR, "Bad Token! Expected atom or count operator!");
+          throw "Bad Token";
         }
       }
       
@@ -68,6 +70,7 @@ namespace tql {
       return selectExpression;
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected token of type SELECT!");
+      throw "Bad Token";
     }
     return selectExpression;
   }
@@ -96,6 +99,7 @@ namespace tql {
         atomExpression.token = lexer->next();
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected Atom!");
+      throw "Bad Token";
     }
 
     if (lexer->peek().getType() == TokenType::AsOperator) {
@@ -130,6 +134,7 @@ namespace tql {
         lexer->next();
       } else {
         this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: '(' !");
+        throw "Bad Token";
       }
 
       if (lexer->peek().getType() == TokenType::DistinctOperator) {
@@ -146,15 +151,18 @@ namespace tql {
         countExpression.expressions.push_back(allExpression);
       } else {
         this->logger->log(tablog::ERROR, "Bad Token! Count expected atom or *!");
+        throw "Bad Token";
       }
 
       if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare(")") == 0) {
         lexer->next();
       } else {
         this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
+        throw "Bad Token";
       }
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected Count!");
+      throw "Bad Token";
     }
 
     return countExpression;
@@ -177,12 +185,15 @@ namespace tql {
             
             if (lexer->peek().getLexeme().compare(")") != 0) {
               this->logger->log(tablog::ERROR, "Bad Token! Expected closing Delimiter after Select operator in From operation!");
+              throw "Bad Token";
             }
           } else {
             this->logger->log(tablog::ERROR, "Bad Token! Expected Select operator after Delimiter!");
+            throw "Bad Token";
           }
       } else {
         this->logger->log(tablog::ERROR, "Bad Token! Expected Atom or Delimiter after From operator!");
+        throw "Bad Token";
       }
     }
     return fromExpression;
