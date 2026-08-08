@@ -71,6 +71,9 @@ namespace tql {
         } else if (tokenString.compare("FROM") == 0) {
           Token token(tokenString, TokenType::FromOperator);
           tokens.push_back(token);
+        } else if (tokenIsInVector(Token::delimiters, tokenString)) {
+          Token token(tokenString, TokenType::Delimiter);
+          tokens.push_back(token);
         } else if (tokenString.compare("") != 0){
           Token token(tokenString, TokenType::Atom);
           tokens.push_back(token);

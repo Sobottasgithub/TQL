@@ -168,10 +168,10 @@ namespace tql {
         this->logger->log(tablog::ERROR, "Bad Token! Count expected atom or *!");
       }
 
-      cursor++;
       if (tokens[cursor].getType() != TokenType::Delimiter && tokens[cursor].getLexeme().compare(")") != 0) {
         this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
       }
+      cursor++;
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected Count!");
     }
