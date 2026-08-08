@@ -21,14 +21,15 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> QueryEngine::execute(std::string query) {
-    std::vector<Token> tokens = this->lexer.tokenize(query);
+    Lexer lexer;
+    lexer.tokenize(query);
 
     // DEBUG: Display lexer output:
     // for (int index = 0; index < tokens.size(); index++) {
     //     std::cout << tokens[index].getLexeme() << " >> " << tokens[index].getTypeAsString() << std::endl;      
     // }
 
-    Parser::Expression expressionTree = this->parser.parse(tokens);
+    Parser::Expression expressionTree = this->parser.parse(lexer);
 
     // DEBUG: Display expression Tree:
     displayExpressionTree(expressionTree);

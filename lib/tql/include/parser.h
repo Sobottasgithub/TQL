@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include "token.h"
+#include "lexer.h"
 
 #include <cstddef>
 #include <tablog.h>
@@ -19,19 +20,18 @@ namespace tql {
       };
       
       Parser();
-      Parser::Expression parse(std::vector<Token> tokens);
+      Parser::Expression parse(Lexer lexer);
       
     private:
       std::shared_ptr<tablog::Tablog> logger;
 
-      Expression parseTokens(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseSelect(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseColumns(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseAtom(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseAs(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseAll(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseCount(std::vector<Token> tokens, int cursor);
-      std::tuple<Expression, int> parseFrom(std::vector<Token> tokens, int cursor);
+      Expression parseTokens(Lexer* lexer);
+      Expression parseSelect(Lexer* lexer);
+      Expression parseColumns(Lexer* lexer);
+      Expression parseAtom(Lexer* lexer);
+      Expression parseAs(Lexer* lexer);
+      Expression parseCount(Lexer* lexer);
+      Expression parseFrom(Lexer* lexer);
   };
 }
 

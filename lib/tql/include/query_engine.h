@@ -19,7 +19,6 @@ namespace tql {
       void displayExpressionTree(Parser::Expression expression);
       
     private:
-      Lexer lexer;
       Parser parser;
       Interpreter interpreter;
   };

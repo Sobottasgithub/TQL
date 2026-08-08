@@ -2,6 +2,7 @@
 
 #include "../include/token.h"
 #include "../include/token_type.h"
+#include "../include/lexer.h"
 
 #include <tablog.h>
 
@@ -16,188 +17,165 @@ namespace tql {
     this->logger = logger;
   }
 
-  Parser::Expression Parser::parse(std::vector<Token> tokens) {
-    return parseTokens(tokens, 0);
-  }
-
-  Parser::Expression Parser::parseTokens(std::vector<Token> tokens, int cursor) {
-    if (tokens[cursor].getType() == TokenType::SelectOperator) {
-        return std::get<0>(parseSelect(tokens, cursor));
+  Parser::Expression Parser::parse(Lexer lexer) {
+    if (lexer.peek().getType() == TokenType::SelectOperator) {
+        return parseSelect(&lexer);
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected token of type Dml!");
     }
   }
 
-  std::tuple<Parser::Expression, int> Parser::parseSelect(std::vector<Token> tokens, int cursor) {
+  Parser::Expression Parser::parseSelect(Lexer* lexer) {
     Parser::Expression selectExpression;
-    if (tokens[cursor].getType() == TokenType::SelectOperator) {
-      selectExpression.token = tokens[cursor];
+    if (lexer->peek().getType() == TokenType::SelectOperator) {
+      selectExpression.token = lexer->next();
       
-      cursor++;
-      if (tokens[cursor].getType() == TokenType::DistinctOperator) {
+      if (lexer->peek().getType() == TokenType::DistinctOperator) {
         Expression distinctExpression;
-        distinctExpression.token = tokens[cursor];
+        distinctExpression.token = lexer->next();
         selectExpression.expressions.push_back(distinctExpression);
         
-        cursor++;
-        if (tokens[cursor].getType() == TokenType::Atom) {
-          std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
-          selectExpression.expressions.push_back(std::get<0>(result));
-          cursor = std::get<1>(result);
-        } else if (tokens[cursor].getType() == TokenType::All) {
+        if (lexer->peek().getType() == TokenType::Atom) {
+          Parser::Expression result = parseColumns(lexer);
+          selectExpression.expressions.push_back(result);
+        } else if (lexer->peek().getType() == TokenType::All) {
           Expression allExpression;
-          allExpression.token = tokens[cursor];
+          allExpression.token = lexer->next();
           selectExpression.expressions.push_back(allExpression);
-          cursor++;
         } else {
           this->logger->log(tablog::ERROR, "Bad Token! Expected atom or *!");
         }
       } else {
-        int tokenType = tokens[cursor].getType();
+        int tokenType = lexer->peek().getType();
         if (tokenType == TokenType::Atom) {
-          std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
-          selectExpression.expressions.push_back(std::get<0>(result));
-          cursor = std::get<1>(result);
-        } else if (tokens[cursor].getType() == TokenType::All) {
+          Parser::Expression result = parseColumns(lexer);
+          selectExpression.expressions.push_back(result);
+        } else if (tokenType == TokenType::All) {
           Expression allExpression;
-          allExpression.token = tokens[cursor];
+          allExpression.token = lexer->next();
           selectExpression.expressions.push_back(allExpression);
-          cursor++;
         } else if (tokenType == TokenType::CountOperator) {
-          std::tuple<Parser::Expression, int> result = parseCount(tokens, cursor);
-          selectExpression.expressions.push_back(std::get<0>(result));
-          cursor = std::get<1>(result);
+          Parser::Expression result = parseCount(lexer);
+          selectExpression.expressions.push_back(result);
         } else {
           this->logger->log(tablog::ERROR, "Bad Token! Expected atom or count operator!");
         }
       }
       
-      std::tuple<Parser::Expression, int> fromResult = parseFrom(tokens, cursor);
-      selectExpression.expressions.push_back(std::get<0>(fromResult));
-      cursor = std::get<1>(fromResult);
+      Parser::Expression fromResult = parseFrom(lexer);
+      selectExpression.expressions.push_back(fromResult);
 
-      return {selectExpression, cursor};
+      return selectExpression;
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected token of type SELECT!");
     }
-    return {selectExpression, cursor};
+    return selectExpression;
   }
 
-  std::tuple<Parser::Expression, int>  Parser::parseColumns(std::vector<Token> tokens, int cursor) {
+  Parser::Expression Parser::parseColumns(Lexer* lexer) {
     Expression columnsExpression;
     columnsExpression.token = Token("", TokenType::Columns);
 
     do {
-      if (tokens[cursor].getLexeme().compare(",") == 0)
-        cursor++;
+      if (lexer->peek().getLexeme().compare(",") == 0)
+        lexer->next();
       
-      if (tokens[cursor].getType() == TokenType::Atom) {
-        std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
-        columnsExpression.expressions.push_back(std::get<0>(parsedAtom));
-        cursor = std::get<1>(parsedAtom);
+      if (lexer->peek().getType() == TokenType::Atom) {
+        Parser::Expression parsedAtom = parseAtom(lexer);
+        columnsExpression.expressions.push_back(parsedAtom);
       }
-      cursor++;
-    } while (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme().compare(",") == 0);
+    } while (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare(",") == 0);
     
-    return {columnsExpression, cursor};    
+    return columnsExpression;    
   }
 
-  std::tuple<Parser::Expression, int> Parser::parseAtom(std::vector<Token> tokens, int cursor) {
+  Parser::Expression Parser::parseAtom(Lexer* lexer) {
     Expression atomExpression;
 
-    if (tokens[cursor].getType() == TokenType::Atom) {
-        atomExpression.token = tokens[cursor];
+    if (lexer->peek().getType() == TokenType::Atom) {
+        atomExpression.token = lexer->next();
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected Atom!");
     }
 
-    if (tokens[cursor + 1].getType() == TokenType::AsOperator) {
-      cursor++;
-      std::tuple<Parser::Expression, int> parsedAs = parseAs(tokens, cursor);
-      atomExpression.expressions.push_back(std::get<0>(parsedAs));
-      cursor = std::get<1>(parsedAs);
+    if (lexer->peek().getType() == TokenType::AsOperator) {
+      Parser::Expression parsedAs = parseAs(lexer);
+      atomExpression.expressions.push_back(parsedAs);
     }
 
-    return {atomExpression, cursor};
+    return atomExpression;
   }
 
-  std::tuple<Parser::Expression, int> Parser::parseAs(std::vector<Token> tokens, int cursor) {
+  Parser::Expression Parser::parseAs(Lexer* lexer) {
     Expression asExpression;
 
-    if (tokens[cursor].getType() == TokenType::AsOperator) {
-      asExpression.token = tokens[cursor];
-      cursor++;
+    if (lexer->peek().getType() == TokenType::AsOperator) {
+      asExpression.token = lexer->next();
       
-      std::tuple<Parser::Expression, int> parsedAs = parseAtom(tokens, cursor);
-      asExpression.expressions.push_back(std::get<0>(parsedAs));
-      cursor = std::get<1>(parsedAs);
+      Parser::Expression parsedAtom = parseAtom(lexer);
+      asExpression.expressions.push_back(parsedAtom);
     }
 
-    return {asExpression, cursor};
+    return asExpression;
   }
   
-  std::tuple<Parser::Expression, int> Parser::parseCount(std::vector<Token> tokens, int cursor) {
+  Parser::Expression Parser::parseCount(Lexer* lexer) {
     Expression countExpression;
 
-    if (tokens[cursor].getType() == TokenType::CountOperator) {
-      countExpression.token = tokens[cursor];
+    if (lexer->peek().getType() == TokenType::CountOperator) {
+      countExpression.token = lexer->next();
 
       // INFO: Delimiters are not added to parser tree
-      cursor++;
-      if (tokens[cursor].getType() != TokenType::Delimiter && tokens[cursor].getLexeme().compare("(") != 0) {
+      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare("(") == 0) {
+        lexer->next();
+      } else {
         this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: '(' !");
       }
 
-      cursor++;
-      if (tokens[cursor].getType() == TokenType::DistinctOperator) {
+      if (lexer->peek().getType() == TokenType::DistinctOperator) {
         Expression distinctExpression;
-        distinctExpression.token = tokens[cursor];
-        cursor++;
+        distinctExpression.token = lexer->next();
       }
 
-      if (tokens[cursor].getType() == TokenType::Atom) {
-        std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
-        countExpression.expressions.push_back(std::get<0>(result));
-        cursor = std::get<1>(result);
-      } else if (tokens[cursor].getType() == TokenType::All) {
+      if (lexer->peek().getType() == TokenType::Atom) {
+        Parser::Expression result = parseColumns(lexer);
+        countExpression.expressions.push_back(result);
+      } else if (lexer->peek().getType() == TokenType::All) {
         Expression allExpression;
-        allExpression.token = tokens[cursor];
+        allExpression.token = lexer->next();
         countExpression.expressions.push_back(allExpression);
-        cursor++;
       } else {
         this->logger->log(tablog::ERROR, "Bad Token! Count expected atom or *!");
       }
 
-      if (tokens[cursor].getType() != TokenType::Delimiter && tokens[cursor].getLexeme().compare(")") != 0) {
+      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare(")") == 0) {
+        lexer->next();
+      } else {
         this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
       }
-      cursor++;
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected Count!");
     }
 
-    return {countExpression, cursor};
+    return countExpression;
   }
   
-  std::tuple<Parser::Expression, int> Parser::parseFrom(std::vector<Token> tokens, int cursor) {
+  Parser::Expression Parser::parseFrom(Lexer* lexer) {
     Expression fromExpression;
 
-    if (tokens[cursor].getType() == TokenType::FromOperator) {
-      fromExpression.token = tokens[cursor];
-      cursor++;
-      if (tokens[cursor].getType() == TokenType::Atom) {
-        std::tuple<Parser::Expression, int> parsedAtom = parseAtom(tokens, cursor);
-        fromExpression.expressions.push_back(std::get<0>(parsedAtom));
-        cursor = std::get<1>(parsedAtom);
-      } else if (tokens[cursor].getType() == TokenType::Delimiter && tokens[cursor].getLexeme().compare("(") == 0) {
-          cursor++;
-          if (tokens[cursor].getType() == TokenType::SelectOperator) {
-            std::tuple<Parser::Expression, int> selectResult = parseSelect(tokens, cursor);
-            fromExpression.expressions.push_back(std::get<0>(selectResult));
-            cursor = std::get<1>(selectResult);
-
-            cursor++;
-            if (tokens[cursor].getLexeme().compare(")") != 0) {
+    if (lexer->peek().getType() == TokenType::FromOperator) {
+      fromExpression.token = lexer->next();
+      if (lexer->peek().getType() == TokenType::Atom) {
+        Parser::Expression parsedAtom = parseAtom(lexer);
+        fromExpression.expressions.push_back(parsedAtom);
+      } else if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare("(") == 0) {
+          lexer->next();
+          if (lexer->peek().getType() == TokenType::SelectOperator) {
+            Parser::Expression selectResult = parseSelect(lexer);
+            fromExpression.expressions.push_back(selectResult);
+            lexer->next();
+            
+            if (lexer->peek().getLexeme().compare(")") != 0) {
               this->logger->log(tablog::ERROR, "Bad Token! Expected closing Delimiter after Select operator in From operation!");
             }
           } else {
@@ -207,6 +185,6 @@ namespace tql {
         this->logger->log(tablog::ERROR, "Bad Token! Expected Atom or Delimiter after From operator!");
       }
     }
-    return {fromExpression, cursor};
+    return fromExpression;
   }
 }
