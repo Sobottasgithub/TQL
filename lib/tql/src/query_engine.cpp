@@ -18,6 +18,10 @@ namespace tql {
     this->interpreter.setOpenFile([&executionEndpoint](std::string filePath) {
         return executionEndpoint.openFile(filePath);
     });
+
+    this->interpreter.setSelectColumns([&executionEndpoint](std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.selectColumns(columnNames, table);
+    });
   }
 
   std::shared_ptr<arrow::Table> QueryEngine::execute(std::string query) {

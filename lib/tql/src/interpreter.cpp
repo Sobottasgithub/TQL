@@ -2,6 +2,7 @@
 
 #include "../include/token_type.h"
 
+#include <arrow/table.h>
 #include <tablog.h>
 #include <memory>
 #include <optional>
@@ -27,6 +28,10 @@ namespace tql {
 
   void Interpreter::setOpenFile(OpenFile openFile) {
     this->openFile = std::move(openFile);
+  }
+
+  void Interpreter::setSelectColumns(SelectColumns selectColumns) {
+    this->selectColumns = selectColumns;
   }
 
   std::shared_ptr<arrow::Table> Interpreter::interpret(Parser::Expression expressionTree) {
@@ -62,7 +67,7 @@ namespace tql {
     
       if (optionalColumnsExpression.has_value()) {
         Parser::Expression columnsExpression = optionalColumnsExpression.value();
-      
+        resultTable = interpretColumns(columnsExpression, resultTable);
       } else if (optionalColumnsExpression.has_value()) {
         Parser::Expression countExpression = optionalCountExpression.value();
       
@@ -87,6 +92,17 @@ namespace tql {
       throw "Undefined behaviour in from for token type";
     }
     return nullptr;
+  }
+
+  std::shared_ptr<arrow::Table> Interpreter::interpretColumns(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    std::vector<std::string> columnNames = {};
+    columnNames.reserve(expression.expressions.size());
+
+    for (int index = 0; index < expression.expressions.size(); ++index) {
+      columnNames.push_back(expression.expressions.at(index).token.getLexeme());
+    }
+
+    return this->selectColumns(columnNames, table);
   }
 
   std::optional<Parser::Expression> Interpreter::getExpressionByTokenType(TokenType requestedTokenType, std::vector<Parser::Expression> expressions) {

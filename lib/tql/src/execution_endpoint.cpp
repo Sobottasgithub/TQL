@@ -42,11 +42,28 @@ namespace tql {
         this->logger->log(tablog::CRITICAL, "Error while read table from CSV file!");
         throw "Error while read table from CSV file!";
       }
-      std::shared_ptr<arrow::Table> table = *maybeTable;
-      return table;
+      std::shared_ptr<arrow::Table> table = maybeTable.ValueOrDie();
+      return std::move(table);
     } else {
       throw std::invalid_argument( "Invalid filepath!" );
       return nullptr;
     }
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::selectColumns(std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
+    std::vector<int> columnIndices;
+
+    for (int index = 0; index < columnNames.size(); ++index) {
+      int columnIndex = table->schema()->GetFieldIndex(columnNames.at(index));
+
+      if (columnIndex != -1)
+        columnIndices.push_back(columnIndex);
+    }
+    
+    arrow::Result<std::shared_ptr<arrow::Table>> resultTable = table->SelectColumns(columnIndices);
+
+    if (resultTable.ok())
+      return std::move(resultTable.ValueOrDie());
+    return nullptr;
   }
 }
