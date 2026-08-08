@@ -140,17 +140,20 @@ namespace tql {
       if (lexer->peek().getType() == TokenType::DistinctOperator) {
         Expression distinctExpression;
         distinctExpression.token = lexer->next();
-      }
-
-      if (lexer->peek().getType() == TokenType::Atom) {
-        Parser::Expression result = parseColumns(lexer);
-        countExpression.expressions.push_back(result);
+        
+        if (lexer->peek().getType() == TokenType::Atom) {
+          Parser::Expression result = parseColumns(lexer);
+          countExpression.expressions.push_back(result);
+        } else {
+          this->logger->log(tablog::ERROR, "Bad Token! Count Distinct expects column names!");
+          throw "Bad Token";
+        }
       } else if (lexer->peek().getType() == TokenType::All) {
         Expression allExpression;
         allExpression.token = lexer->next();
         countExpression.expressions.push_back(allExpression);
       } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Count expected atom or *!");
+        this->logger->log(tablog::ERROR, "Bad Token! Count expected * or distinct columns!");
         throw "Bad Token";
       }
 
