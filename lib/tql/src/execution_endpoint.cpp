@@ -1,5 +1,6 @@
 #include "../include/execution_endpoint.h"
 
+#include <arrow/type.h>
 #include <tablog.h>
 #include <filesystem>
 #include <memory>
@@ -12,6 +13,7 @@
 #include <arrow/acero/options.h>
 #include <arrow/compute/api.h>
 #include <arrow/acero/util.h>
+#include <arrow/acero/exec_plan.h>
 
 namespace tql {
   ExecutionEndpoint::ExecutionEndpoint() {
@@ -72,7 +74,25 @@ namespace tql {
     return nullptr;
   }
 
-  std::shared_ptr<arrow::Table> ExecutionEndpoint::getDistinct(std::shared_ptr<arrow::Table> table) {
-    throw "Corrupt result table when calculating distinct";
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getDistinct(std::shared_ptr<arrow::Table> table) {    
+    arrow::acero::Declaration source{
+        "table_source", 
+        arrow::acero::TableSourceNodeOptions(table)
+    };
+
+    std::vector<std::string> distinctColumns = table->ColumnNames();
+    std::vector<arrow::FieldRef> keys;
+    for (int index = 0; index < distinctColumns.size(); ++index) {
+      keys.push_back(arrow::FieldRef(distinctColumns.at(index)));
+    }
+
+    arrow::acero::Declaration aggregate {
+        "aggregate",
+        arrow::acero::AggregateNodeOptions{/*aggregates=*/{}, /*keys=*/keys}
+    };
+
+    arrow::acero::Declaration plan = arrow::acero::Declaration::Sequence({source, aggregate});
+
+    return std::move(arrow::acero::DeclarationToTable(plan).ValueOrDie());
   }
 }
