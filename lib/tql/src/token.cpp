@@ -20,6 +20,8 @@ namespace tql {
         return "Atom";
       case TokenType::Columns:
         return "Columns";
+      case TokenType::All:
+        return "*";
       case TokenType::Delimiter:
         return "Delimiter";
       case TokenType::SelectOperator:

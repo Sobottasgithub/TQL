@@ -65,6 +65,9 @@ namespace tql {
         } else if (tokenString.compare("AS") == 0) {
           Token token(tokenString, TokenType::AsOperator);
           tokens.push_back(token);
+        } else if (tokenString.compare("*") == 0) {
+          Token token(tokenString, TokenType::All);
+          tokens.push_back(token);
         } else if (tokenString.compare("FROM") == 0) {
           Token token(tokenString, TokenType::FromOperator);
           tokens.push_back(token);

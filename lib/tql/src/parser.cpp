@@ -44,6 +44,13 @@ namespace tql {
           std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
           selectExpression.expressions.push_back(std::get<0>(result));
           cursor = std::get<1>(result);
+        } else if (tokens[cursor].getType() == TokenType::All) {
+          Expression allExpression;
+          allExpression.token = tokens[cursor];
+          selectExpression.expressions.push_back(allExpression);
+          cursor++;
+        } else {
+          this->logger->log(tablog::ERROR, "Bad Token! Expected atom or *!");
         }
       } else {
         int tokenType = tokens[cursor].getType();
@@ -51,6 +58,11 @@ namespace tql {
           std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
           selectExpression.expressions.push_back(std::get<0>(result));
           cursor = std::get<1>(result);
+        } else if (tokens[cursor].getType() == TokenType::All) {
+          Expression allExpression;
+          allExpression.token = tokens[cursor];
+          selectExpression.expressions.push_back(allExpression);
+          cursor++;
         } else if (tokenType == TokenType::CountOperator) {
           std::tuple<Parser::Expression, int> result = parseCount(tokens, cursor);
           selectExpression.expressions.push_back(std::get<0>(result));
@@ -147,8 +159,13 @@ namespace tql {
         std::tuple<Parser::Expression, int> result = parseColumns(tokens, cursor);
         countExpression.expressions.push_back(std::get<0>(result));
         cursor = std::get<1>(result);
+      } else if (tokens[cursor].getType() == TokenType::All) {
+        Expression allExpression;
+        allExpression.token = tokens[cursor];
+        countExpression.expressions.push_back(allExpression);
+        cursor++;
       } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Count expected atom!");
+        this->logger->log(tablog::ERROR, "Bad Token! Count expected atom or *!");
       }
 
       cursor++;
