@@ -163,6 +163,11 @@ namespace tql {
         this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
         throw "Bad Token";
       }
+
+      if (lexer->peek().getType() == TokenType::AsOperator) {
+        Parser::Expression parsedAs = parseAs(lexer);
+        countExpression.expressions.push_back(parsedAs);
+      }
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected Count!");
       throw "Bad Token";
