@@ -42,6 +42,10 @@ namespace tql {
     this->getCount = getCount;
   }
 
+  void Interpreter::setGetRenamedTable(GetRenamedTable getRenamedTable) {
+    this->getRenamedTable = getRenamedTable;
+  }
+
   std::shared_ptr<arrow::Table> Interpreter::interpret(Parser::Expression expressionTree) {
     if (expressionTree.token.getType() == TokenType::SelectOperator) {
       return interpretSelect(expressionTree);
@@ -113,7 +117,16 @@ namespace tql {
       columnNames.push_back(expression.expressions.at(index).token.getLexeme());
     }
 
-    return this->selectColumns(columnNames, table);
+    std::shared_ptr<arrow::Table> resultTable = this->selectColumns(columnNames, table);
+
+    for (int index = 0; index < expression.expressions.size(); ++index) {
+      std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions.at(index).expressions);
+      if (optionalAsExpression.has_value()) {
+        resultTable = interpretAs(columnNames.at(index), optionalAsExpression.value(), resultTable);
+      }
+    }
+
+    return resultTable;
   }
 
   std::shared_ptr<arrow::Table> Interpreter::interpretDistinct(std::shared_ptr<arrow::Table> table) {
@@ -139,7 +152,18 @@ namespace tql {
       table = this->getDistinct(table);
     }
     
-    return this->getCount(table);
+    std::shared_ptr<arrow::Table> resultTable = this->getCount(table);
+
+    std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions);
+    if (optionalAsExpression.has_value()) {
+      resultTable = interpretAs(resultTable->ColumnNames().at(0), optionalAsExpression.value(), resultTable);
+    }
+    
+    return resultTable;
+  }
+
+  std::shared_ptr<arrow::Table> Interpreter::interpretAs(std::string originalColumnName, Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    return this->getRenamedTable(originalColumnName, expression.expressions.at(0).token.getLexeme(), table);
   }
 
   std::optional<Parser::Expression> Interpreter::getExpressionByTokenType(TokenType requestedTokenType, std::vector<Parser::Expression> expressions) {

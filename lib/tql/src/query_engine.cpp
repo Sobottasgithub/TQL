@@ -30,6 +30,11 @@ namespace tql {
     this->interpreter.setGetCount([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
         return executionEndpoint.getCount(table);
     });
+
+    this->interpreter.setGetRenamedTable([&executionEndpoint](std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getRenamedTable(originalColumnName, newColumnName, table);
+    });
+
   }
 
   std::shared_ptr<arrow::Table> QueryEngine::execute(std::string query) {

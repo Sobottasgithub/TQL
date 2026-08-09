@@ -111,4 +111,14 @@ namespace tql {
     
     return std::move(resultTable);
   }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {    
+    int columnIndex = table->schema()->GetFieldIndex(originalColumnName);
+    std::shared_ptr<arrow::Field> old_field = table->field(columnIndex);
+    std::shared_ptr<arrow::Field> new_field = old_field->WithName(newColumnName);
+
+    std::shared_ptr<arrow::ChunkedArray> column_data = table->column(columnIndex);
+
+    return std::move(table->SetColumn(columnIndex, new_field, column_data).ValueOrDie());
+  }
 }
