@@ -38,6 +38,10 @@ namespace tql {
     this->getDistinct = getDistinct;
   }
 
+  void Interpreter::setGetCount(GetCount getCount) {
+    this->getCount = getCount;
+  }
+
   std::shared_ptr<arrow::Table> Interpreter::interpret(Parser::Expression expressionTree) {
     if (expressionTree.token.getType() == TokenType::SelectOperator) {
       return interpretSelect(expressionTree);
@@ -60,9 +64,6 @@ namespace tql {
       throw "Missing From expression!";
     }
 
-    //TODO: Interpret all the other functions
-    
-
     // INFO: Interpret SELECT
     std::optional<Parser::Expression> optionalAllExpression = getExpressionByTokenType(TokenType::All, expression.expressions);
     if (!optionalAllExpression.has_value()) { // The all expression doesnt alter the table
@@ -72,9 +73,9 @@ namespace tql {
       if (optionalColumnsExpression.has_value()) {
         Parser::Expression columnsExpression = optionalColumnsExpression.value();
         resultTable = interpretColumns(columnsExpression, resultTable);
-      } else if (optionalColumnsExpression.has_value()) {
+      } else if (optionalCountExpression.has_value()) {
         Parser::Expression countExpression = optionalCountExpression.value();
-      
+        resultTable = interpretCount(countExpression, resultTable);
       } else {
         this->logger->log(tablog::CRITICAL, "Missing columns or aggregate expression!");
         throw "Missing columns or aggregate expression!";
@@ -117,6 +118,28 @@ namespace tql {
 
   std::shared_ptr<arrow::Table> Interpreter::interpretDistinct(std::shared_ptr<arrow::Table> table) {
     return this->getDistinct(table);
+  }
+
+  std::shared_ptr<arrow::Table> Interpreter::interpretCount(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    std::optional<Parser::Expression> optionalAllExpression = getExpressionByTokenType(TokenType::All, expression.expressions);
+    if (!optionalAllExpression.has_value()) { // The all expression doesnt alter the table
+      std::optional<Parser::Expression> optionalColumnsExpression = getExpressionByTokenType(TokenType::Columns, expression.expressions);
+    
+      if (optionalColumnsExpression.has_value()) {
+        Parser::Expression columnsExpression = optionalColumnsExpression.value();
+        table = interpretColumns(columnsExpression, table);
+      } else {
+        this->logger->log(tablog::CRITICAL, "Missing columns expression!");
+        throw "Missing columns expression!";
+      }
+    }
+
+    std::optional<Parser::Expression> optionalDistinctExpression = getExpressionByTokenType(TokenType::DistinctOperator, expression.expressions);
+    if (optionalDistinctExpression.has_value()) {
+      table = this->getDistinct(table);
+    }
+    
+    return this->getCount(table);
   }
 
   std::optional<Parser::Expression> Interpreter::getExpressionByTokenType(TokenType requestedTokenType, std::vector<Parser::Expression> expressions) {

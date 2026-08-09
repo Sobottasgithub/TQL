@@ -95,4 +95,20 @@ namespace tql {
 
     return std::move(arrow::acero::DeclarationToTable(plan).ValueOrDie());
   }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getCount(std::shared_ptr<arrow::Table> table) {
+    arrow::Int64Builder builder;
+    arrow::Status status = builder.Append(table->num_columns());
+    if (!status.ok()) {
+      throw "Unable to calc count";
+    }
+    
+    std::shared_ptr<arrow::Array> array;
+    status = builder.Finish(&array);
+    std::shared_ptr<arrow::Field> field = arrow::field("count", arrow::int64());
+    std::shared_ptr<arrow::Schema> schema = arrow::schema({field});
+    std::shared_ptr<arrow::Table> resultTable = arrow::Table::Make(schema, {array});
+    
+    return std::move(resultTable);
+  }
 }

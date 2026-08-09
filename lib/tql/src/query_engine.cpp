@@ -26,6 +26,10 @@ namespace tql {
     this->interpreter.setGetDistinct([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
         return executionEndpoint.getDistinct(table);
     });
+
+    this->interpreter.setGetCount([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getCount(table);
+    });
   }
 
   std::shared_ptr<arrow::Table> QueryEngine::execute(std::string query) {
