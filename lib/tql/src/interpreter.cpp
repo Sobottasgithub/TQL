@@ -96,7 +96,7 @@ namespace tql {
     if (childTokenType == TokenType::Atom) {
       return this->openFile(childExpression.token.getLexeme());
     } else if (childTokenType == TokenType::SelectOperator) {
-      interpretSelect(childExpression);
+      return interpretSelect(childExpression);
     } else {
       this->logger->log(tablog::CRITICAL, "Undefined behaviour in from for token type: " + childExpression.token.getTypeAsString());
       throw "Undefined behaviour in from for token type";

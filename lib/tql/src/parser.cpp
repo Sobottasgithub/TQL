@@ -184,12 +184,13 @@ namespace tql {
           if (lexer->peek().getType() == TokenType::SelectOperator) {
             Parser::Expression selectResult = parseSelect(lexer);
             fromExpression.expressions.push_back(selectResult);
-            lexer->next();
             
             if (lexer->peek().getLexeme().compare(")") != 0) {
               this->logger->log(tablog::ERROR, "Bad Token! Expected closing Delimiter after Select operator in From operation!");
               throw "Bad Token";
             }
+
+            lexer->next();
           } else {
             this->logger->log(tablog::ERROR, "Bad Token! Expected Select operator after Delimiter!");
             throw "Bad Token";
