@@ -13,8 +13,14 @@ namespace tql {
 
     // CardinaltiesOperator
     DistinctOperator,
-    CountOperator,
     AsOperator,
+
+    // Aggregate Functions
+    CountOperator,
+    MinOperator,
+    MaxOperator,
+    SumOperator,
+    AvgOperator,
     
     FromOperator,
     Operator,
