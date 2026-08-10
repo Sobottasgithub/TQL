@@ -98,7 +98,7 @@ namespace tql {
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getCount(std::shared_ptr<arrow::Table> table) {
     arrow::Int64Builder builder;
-    arrow::Status status = builder.Append(table->num_columns());
+    arrow::Status status = builder.Append(table->num_rows());
     if (!status.ok()) {
       throw "Unable to calc count";
     }
