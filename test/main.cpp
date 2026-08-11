@@ -7,17 +7,18 @@
 #include <chrono>
 #include <memory>
 #include <arrow/table.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 using namespace tql;
 
 int main() {
-    std::string query;
+    char* query;
     QueryEngine queryEngine;
 
     while (true) {
-        std::cout << "Please enter a query: ";
-        std::getline(std::cin, query);
-
+        query = readline("Query> ");
+            
         std::chrono::time_point start = std::chrono::steady_clock::now();
         std::shared_ptr<arrow::Table> resultTable = queryEngine.execute(query);
         std::chrono::time_point end = std::chrono::steady_clock::now();
@@ -26,6 +27,9 @@ int main() {
                   << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "µs "
                   << std::chrono::duration_cast<std::chrono::nanoseconds> (end - start).count() << "ns " << std::endl;
         std::cout << "Result table: \n" << resultTable->ToString() << std::endl;
+
+        add_history(query);
+        std::free(query);
     }
     
     return 0;

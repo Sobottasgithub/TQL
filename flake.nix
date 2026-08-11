@@ -29,6 +29,8 @@
         gnumake
         libtablog
         arrow-cpp
+        readline
+        pkg-config
       ];
 
       mkTQLPackage =
