@@ -129,6 +129,10 @@ namespace tql {
     return resultTable;
   }
 
+  std::shared_ptr<arrow::Table> Interpreter::interpretAtom(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    return this->selectColumns({expression.token.getLexeme()}, table);
+  }
+
   std::shared_ptr<arrow::Table> Interpreter::interpretDistinct(std::shared_ptr<arrow::Table> table) {
     return this->getDistinct(table);
   }
@@ -137,10 +141,14 @@ namespace tql {
     std::optional<Parser::Expression> optionalAllExpression = getExpressionByTokenType(TokenType::All, expression.expressions);
     if (!optionalAllExpression.has_value()) { // The all expression doesnt alter the table
       std::optional<Parser::Expression> optionalColumnsExpression = getExpressionByTokenType(TokenType::Columns, expression.expressions);
-    
+      std::optional<Parser::Expression> optionalAtomExpression = getExpressionByTokenType(TokenType::Atom, expression.expressions);
+      
       if (optionalColumnsExpression.has_value()) {
         Parser::Expression columnsExpression = optionalColumnsExpression.value();
         table = interpretColumns(columnsExpression, table);
+      } else if (optionalAtomExpression.has_value()) {
+        Parser::Expression atomExpression = optionalAtomExpression.value();
+        table = interpretAtom(atomExpression, table);
       } else {
         this->logger->log(tablog::CRITICAL, "Missing columns expression!");
         throw "Missing columns expression!";

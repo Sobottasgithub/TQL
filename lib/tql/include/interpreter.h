@@ -41,6 +41,7 @@ namespace tql {
       std::shared_ptr<arrow::Table> interpretSelect(Parser::Expression expression);
       std::shared_ptr<arrow::Table> interpretFrom(Parser::Expression expression);
       std::shared_ptr<arrow::Table> interpretColumns(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
+      std::shared_ptr<arrow::Table> interpretAtom(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> interpretDistinct(std::shared_ptr<arrow::Table>);
       std::shared_ptr<arrow::Table> interpretCount(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> interpretAs(std::string originalColumnName, Parser::Expression expression, std::shared_ptr<arrow::Table> table);
