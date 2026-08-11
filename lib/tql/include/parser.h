@@ -31,6 +31,9 @@ namespace tql {
       Expression parseAtom(Lexer* lexer);
       Expression parseAs(Lexer* lexer);
       Expression parseCount(Lexer* lexer);
+      Expression parseMinMax(Lexer* lexer, TokenType aggregateTokenType);
+      Expression parseMax(Lexer* lexer);
+      Expression parseMin(Lexer* lexer);
       Expression parseFrom(Lexer* lexer);
   };
 }

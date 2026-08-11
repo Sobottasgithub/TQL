@@ -58,6 +58,12 @@ namespace tql {
         } else if (tokenType == TokenType::CountOperator) {
           Parser::Expression result = parseCount(lexer);
           selectExpression.expressions.push_back(result);
+        } else if (tokenType == TokenType::MinOperator) {
+          Parser::Expression result = parseMin(lexer);
+          selectExpression.expressions.push_back(result);
+        } else if (tokenType == TokenType::MinOperator) {
+          Parser::Expression result = parseMax(lexer);
+          selectExpression.expressions.push_back(result);
         } else {
           this->logger->log(tablog::ERROR, "Bad Token! Expected atom or count operator!");
           throw "Bad Token";
@@ -174,6 +180,67 @@ namespace tql {
     }
 
     return countExpression;
+  }
+
+  Parser::Expression Parser::parseMinMax(Lexer* lexer, TokenType aggregateTokenType) {
+    Expression minMaxExpression;
+
+    if (lexer->peek().getType() == aggregateTokenType) {
+      minMaxExpression.token = lexer->next();
+
+      // INFO: Delimiters are not added to parser tree
+      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare("(") == 0) {
+        lexer->next();
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: '(' !");
+        throw "Bad Token";
+      }
+
+      if (lexer->peek().getType() == TokenType::DistinctOperator) {
+        Expression distinctExpression;
+        distinctExpression.token = lexer->next();
+        
+        if (lexer->peek().getType() == TokenType::Atom) {
+          Parser::Expression result = parseAtom(lexer);
+          distinctExpression.expressions.push_back(result);
+        } else {
+          this->logger->log(tablog::ERROR, "Bad Token! Min Distinct expects a column name!");
+          throw "Bad Token";
+        }
+        minMaxExpression.expressions.push_back(distinctExpression);
+      } else if (lexer->peek().getType() == TokenType::Atom) {
+        Parser::Expression result = parseAtom(lexer);
+        minMaxExpression.expressions.push_back(result);
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Min/Max Distinct expects a column name!");
+        throw "Bad Token";
+      }
+      
+      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare(")") == 0) {
+        lexer->next();
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
+        throw "Bad Token";
+      }
+
+      if (lexer->peek().getType() == TokenType::AsOperator) {
+        Parser::Expression parsedAs = parseAs(lexer);
+        minMaxExpression.expressions.push_back(parsedAs);
+      }
+    } else {
+      this->logger->log(tablog::ERROR, "Bad Token! Expected Min/Max!");
+      throw "Bad Token";
+    }
+
+    return minMaxExpression;
+  }
+
+  Parser::Expression Parser::parseMax(Lexer* lexer) {
+    return parseMinMax(lexer, TokenType::MaxOperator);
+  }
+
+  Parser::Expression Parser::parseMin(Lexer* lexer) {
+    return parseMinMax(lexer, TokenType::MinOperator);
   }
   
   Parser::Expression Parser::parseFrom(Lexer* lexer) {
