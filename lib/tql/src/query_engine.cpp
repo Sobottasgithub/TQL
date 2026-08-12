@@ -31,6 +31,14 @@ namespace tql {
         return executionEndpoint.getCount(table);
     });
 
+    this->interpreter.setGetMin([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getMin(table);
+    });
+
+    this->interpreter.setGetMax([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getMax(table);
+    });
+
     this->interpreter.setGetRenamedTable([&executionEndpoint](std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {
         return executionEndpoint.getRenamedTable(originalColumnName, newColumnName, table);
     });

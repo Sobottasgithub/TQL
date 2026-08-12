@@ -17,6 +17,8 @@ namespace tql {
       using SelectColumns = std::function<std::shared_ptr<arrow::Table>(std::vector<std::string>, std::shared_ptr<arrow::Table>)>;
       using GetDistinct = std::function<std::shared_ptr<arrow::Table>(std::shared_ptr<arrow::Table>)>;
       using GetCount = std::function<std::shared_ptr<arrow::Table>(std::shared_ptr<arrow::Table>)>;
+      using GetMax = std::function<std::shared_ptr<arrow::Table>(std::shared_ptr<arrow::Table>)>;
+      using GetMin = std::function<std::shared_ptr<arrow::Table>(std::shared_ptr<arrow::Table>)>;
       using GetRenamedTable = std::function<std::shared_ptr<arrow::Table>(std::string, std::string, std::shared_ptr<arrow::Table>)>;
       
       Interpreter();
@@ -25,6 +27,8 @@ namespace tql {
       void setSelectColumns(SelectColumns selectColumns);
       void setGetDistinct(GetDistinct getDistinct);
       void setGetCount(GetCount getCount);
+      void setGetMin(GetMin getMin);
+      void setGetMax(GetMax getMax);
       void setGetRenamedTable(GetRenamedTable getRenamedTable);
       
       std::shared_ptr<arrow::Table> interpret(Parser::Expression expressionTree);
@@ -36,6 +40,8 @@ namespace tql {
       SelectColumns selectColumns;
       GetDistinct getDistinct;
       GetCount getCount;
+      GetMin getMin;
+      GetMax getMax;
       GetRenamedTable getRenamedTable;
 
       std::shared_ptr<arrow::Table> interpretSelect(Parser::Expression expression);
@@ -44,6 +50,8 @@ namespace tql {
       std::shared_ptr<arrow::Table> interpretAtom(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> interpretDistinct(std::shared_ptr<arrow::Table>);
       std::shared_ptr<arrow::Table> interpretCount(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
+      std::shared_ptr<arrow::Table> interpretMin(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
+      std::shared_ptr<arrow::Table> interpretMax(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> interpretAs(std::string originalColumnName, Parser::Expression expression, std::shared_ptr<arrow::Table> table);
 
       std::optional<Parser::Expression> getExpressionByTokenType(TokenType requestedTokenType, std::vector<Parser::Expression> expressions);
