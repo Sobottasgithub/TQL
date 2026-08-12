@@ -61,7 +61,7 @@ namespace tql {
         } else if (tokenType == TokenType::MinOperator) {
           Parser::Expression result = parseMin(lexer);
           selectExpression.expressions.push_back(result);
-        } else if (tokenType == TokenType::MinOperator) {
+        } else if (tokenType == TokenType::MaxOperator) {
           Parser::Expression result = parseMax(lexer);
           selectExpression.expressions.push_back(result);
         } else {
