@@ -6,13 +6,19 @@
 #include "../include/interpreter.h"
 #include "../include/execution_endpoint.h"
 
+#include <arrow/type.h>
 #include <string>
+#include <tablog.h>
 #include <vector>
 #include <memory>
 #include <arrow/table.h>
 
 namespace tql {
   QueryEngine::QueryEngine() {
+    std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
+    logger->configure("QueryEngine", true);
+    this->logger = logger;
+
     ExecutionEndpoint executionEndpoint;
       
     this->interpreter.setOpenFile([&executionEndpoint](std::string filePath) {
@@ -49,22 +55,23 @@ namespace tql {
     lexer.tokenize(query);
 
     // DEBUG: Display lexer output:
-    // for (int index = 0; index < tokens.size(); index++) {
-    //     std::cout << tokens[index].getLexeme() << " >> " << tokens[index].getTypeAsString() << std::endl;      
-    // }
+    while (lexer.peek().getType() != TokenType::Eof) {
+        Token currentToken = lexer.next();
+        this->logger->log(tablog::DEBUG, currentToken.getTypeAsString() + " >> " + currentToken.getLexeme());
+    }
 
-    Parser::Expression expressionTree = this->parser.parse(lexer);
+    // Parser::Expression expressionTree = this->parser.parse(lexer);
 
     // DEBUG: Display expression Tree:
-    displayExpressionTree(expressionTree);
+    // displayExpressionTree(expressionTree);
 
-    return this->interpreter.interpret(expressionTree);
+    // return this->interpreter.interpret(expressionTree);
+
+    // DEBUG
+    return nullptr;
   }
 
   void QueryEngine::displayExpressionTree(Parser::Expression expression) {
-      std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
-      logger->configure("ExpressionTree", true);
-
       // Post order
       if (expression.token.getType() == TokenType::Columns) {
           for (int index = 0; index < expression.expressions.size(); index++) {
@@ -79,8 +86,8 @@ namespace tql {
       }
 
       if (expression.token.getType() == TokenType::Atom)
-          logger->log(tablog::DEBUG, expression.token.getTypeAsString() + " -> " + expression.token.getLexeme());
+          this->logger->log(tablog::DEBUG, expression.token.getTypeAsString() + " -> " + expression.token.getLexeme());
       else
-          logger->log(tablog::DEBUG, expression.token.getTypeAsString());
+          this->logger->log(tablog::DEBUG, expression.token.getTypeAsString());
   }
 }
