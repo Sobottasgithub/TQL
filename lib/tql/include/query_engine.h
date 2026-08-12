@@ -19,6 +19,8 @@ namespace tql {
       void displayExpressionTree(Parser::Expression expression);
       
     private:
+      std::shared_ptr<tablog::Tablog> logger;
+      
       Parser parser;
       Interpreter interpreter;
   };
