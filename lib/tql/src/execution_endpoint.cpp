@@ -1,5 +1,6 @@
 #include "../include/execution_endpoint.h"
 
+#include <arrow/scalar.h>
 #include <arrow/type.h>
 #include <tablog.h>
 #include <filesystem>
@@ -97,19 +98,41 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getCount(std::shared_ptr<arrow::Table> table) {
-    arrow::Int64Builder builder;
-    arrow::Status status = builder.Append(table->num_rows());
-    if (!status.ok()) {
-      throw "Unable to calc count";
+    return makeSingleColumnSingleRowTable("min", table->num_rows());
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getMin(std::shared_ptr<arrow::Table> table) {
+    int64_t minIntValue;
+    std::shared_ptr<arrow::Int64Scalar> initIntScalar = getScalarValueFromIndex(table, 0, 0);
+    if (!initIntScalar->is_valid)
+      throw "Invalid column type for Min";
+    minIntValue = initIntScalar->value;  
+
+    // Starting with 1 because we already set the init value of minIntValue to the value of rowIndex 0
+    for (int rowIndex = 1; rowIndex < table->num_rows(); ++rowIndex) {
+      std::shared_ptr<arrow::Int64Scalar> intScalar = getScalarValueFromIndex(table, 0, rowIndex);
+      if (intScalar->value < minIntValue)
+        minIntValue = intScalar->value;
     }
-    
-    std::shared_ptr<arrow::Array> array;
-    status = builder.Finish(&array);
-    std::shared_ptr<arrow::Field> field = arrow::field("count", arrow::int64());
-    std::shared_ptr<arrow::Schema> schema = arrow::schema({field});
-    std::shared_ptr<arrow::Table> resultTable = arrow::Table::Make(schema, {array});
-    
-    return std::move(resultTable);
+
+    return makeSingleColumnSingleRowTable("min", minIntValue);
+  }
+  
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getMax(std::shared_ptr<arrow::Table> table) {
+    int64_t maxIntValue;
+    std::shared_ptr<arrow::Int64Scalar> initIntScalar = getScalarValueFromIndex(table, 0, 0);
+    if (!initIntScalar->is_valid)
+      throw "Invalid column type for Min";
+    maxIntValue = initIntScalar->value;  
+
+    // Starting with 1 because we already set the init value of minIntValue to the value of rowIndex 0
+    for (int rowIndex = 1; rowIndex < table->num_rows(); ++rowIndex) {
+      std::shared_ptr<arrow::Int64Scalar> intScalar = getScalarValueFromIndex(table, 0, rowIndex);
+      if (intScalar->value > maxIntValue)
+        maxIntValue = intScalar->value;
+    }
+
+    return makeSingleColumnSingleRowTable("min", maxIntValue);
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {    
@@ -120,5 +143,27 @@ namespace tql {
     std::shared_ptr<arrow::ChunkedArray> column_data = table->column(columnIndex);
 
     return std::move(table->SetColumn(columnIndex, new_field, column_data).ValueOrDie());
+  }
+
+  std::shared_ptr<arrow::Int64Scalar> ExecutionEndpoint::getScalarValueFromIndex(std::shared_ptr<arrow::Table> table, int columnIndex, int rowIndex) {
+    std::shared_ptr<arrow::Scalar> scalar = table->column(columnIndex)->GetScalar(rowIndex).ValueOrDie();
+    std::shared_ptr<arrow::Int64Scalar> intScalar = std::static_pointer_cast<arrow::Int64Scalar>(scalar);
+    return intScalar;
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::makeSingleColumnSingleRowTable(std::string fieldName, int value) {
+    arrow::Int64Builder builder;
+    arrow::Status status = builder.Append(value);
+    if (!status.ok()) {
+      throw "Unable to calc count";
+    }
+    
+    std::shared_ptr<arrow::Array> array;
+    status = builder.Finish(&array);
+    std::shared_ptr<arrow::Field> field = arrow::field(fieldName, arrow::int64());
+    std::shared_ptr<arrow::Schema> schema = arrow::schema({field});
+    std::shared_ptr<arrow::Table> resultTable = arrow::Table::Make(schema, {array});
+
+    return std::move(resultTable);
   }
 }

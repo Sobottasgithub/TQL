@@ -60,6 +60,18 @@ namespace tql {
         } else if (tokenString.compare("COUNT") == 0) {
           Token token(tokenString, TokenType::CountOperator);
           tokens.push_back(token);
+        } else if (tokenString.compare("MIN") == 0) {
+          Token token(tokenString, TokenType::MinOperator);
+          tokens.push_back(token);
+        } else if (tokenString.compare("MAX") == 0) {
+          Token token(tokenString, TokenType::MaxOperator);
+          tokens.push_back(token);
+        } else if (tokenString.compare("SUM") == 0) {
+          Token token(tokenString, TokenType::SumOperator);
+          tokens.push_back(token);
+        } else if (tokenString.compare("AVG") == 0) {
+          Token token(tokenString, TokenType::AvgOperator);
+          tokens.push_back(token);
         } else if (tokenString.compare("AS") == 0) {
           Token token(tokenString, TokenType::AsOperator);
           tokens.push_back(token);

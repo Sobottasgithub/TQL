@@ -6,7 +6,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB_RECURSE SOURCES "./*.cpp" "./*.h")
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(READLINE REQUIRED readline)
+
 add_executable(tql-test ${SOURCES})
+
+
+
+target_include_directories(tql-test PRIVATE ${READLINE_INCLUDE_DIRS})
+target_link_directories(tql-test PRIVATE ${READLINE_LIBRARY_DIRS})
+# Link readline libraries
+target_link_libraries(tql-test PRIVATE ${READLINE_LIBRARIES})
+
 
 target_link_libraries(tql-test PRIVATE tql)
 target_link_libraries(tql-test PRIVATE tablog)

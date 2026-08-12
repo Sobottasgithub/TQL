@@ -28,6 +28,14 @@ namespace tql {
         return "SelectOperator";
       case TokenType::CountOperator:
         return "CountOperator";
+      case TokenType::MinOperator:
+        return "MinOperator";
+      case TokenType::MaxOperator:
+        return "MaxOperator";
+      case TokenType::SumOperator:
+        return "SumOperator";
+      case TokenType::AvgOperator:
+        return "AvgOperator";
       case TokenType::DistinctOperator:
         return "DistinctOperator";
       case TokenType::AsOperator:

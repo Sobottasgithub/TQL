@@ -42,6 +42,14 @@ namespace tql {
     this->getCount = getCount;
   }
 
+  void Interpreter::setGetMin(GetMin getMin) {
+    this->getMin = getMin;
+  }
+
+  void Interpreter::setGetMax(GetMax getMax) {
+    this->getMax = getMax;
+  }
+
   void Interpreter::setGetRenamedTable(GetRenamedTable getRenamedTable) {
     this->getRenamedTable = getRenamedTable;
   }
@@ -73,6 +81,8 @@ namespace tql {
     if (!optionalAllExpression.has_value()) { // The all expression doesnt alter the table
       std::optional<Parser::Expression> optionalColumnsExpression = getExpressionByTokenType(TokenType::Columns, expression.expressions);
       std::optional<Parser::Expression> optionalCountExpression = getExpressionByTokenType(TokenType::CountOperator, expression.expressions);
+      std::optional<Parser::Expression> optionalMinExpression = getExpressionByTokenType(TokenType::MinOperator, expression.expressions);
+      std::optional<Parser::Expression> optionalMaxExpression = getExpressionByTokenType(TokenType::MaxOperator, expression.expressions);
     
       if (optionalColumnsExpression.has_value()) {
         Parser::Expression columnsExpression = optionalColumnsExpression.value();
@@ -80,6 +90,12 @@ namespace tql {
       } else if (optionalCountExpression.has_value()) {
         Parser::Expression countExpression = optionalCountExpression.value();
         resultTable = interpretCount(countExpression, resultTable);
+      } else if (optionalMinExpression.has_value()) {
+        Parser::Expression minExpression = optionalMinExpression.value();
+        resultTable = interpretMin(minExpression, resultTable);
+      } else if (optionalMaxExpression.has_value()) {
+        Parser::Expression maxExpression = optionalMaxExpression.value();
+        resultTable = interpretMax(maxExpression, resultTable);
       } else {
         this->logger->log(tablog::CRITICAL, "Missing columns or aggregate expression!");
         throw "Missing columns or aggregate expression!";
@@ -129,6 +145,10 @@ namespace tql {
     return resultTable;
   }
 
+  std::shared_ptr<arrow::Table> Interpreter::interpretAtom(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    return this->selectColumns({expression.token.getLexeme()}, table);
+  }
+
   std::shared_ptr<arrow::Table> Interpreter::interpretDistinct(std::shared_ptr<arrow::Table> table) {
     return this->getDistinct(table);
   }
@@ -137,10 +157,14 @@ namespace tql {
     std::optional<Parser::Expression> optionalAllExpression = getExpressionByTokenType(TokenType::All, expression.expressions);
     if (!optionalAllExpression.has_value()) { // The all expression doesnt alter the table
       std::optional<Parser::Expression> optionalColumnsExpression = getExpressionByTokenType(TokenType::Columns, expression.expressions);
-    
+      std::optional<Parser::Expression> optionalAtomExpression = getExpressionByTokenType(TokenType::Atom, expression.expressions);
+      
       if (optionalColumnsExpression.has_value()) {
         Parser::Expression columnsExpression = optionalColumnsExpression.value();
         table = interpretColumns(columnsExpression, table);
+      } else if (optionalAtomExpression.has_value()) {
+        Parser::Expression atomExpression = optionalAtomExpression.value();
+        table = interpretAtom(atomExpression, table);
       } else {
         this->logger->log(tablog::CRITICAL, "Missing columns expression!");
         throw "Missing columns expression!";
@@ -161,6 +185,57 @@ namespace tql {
     
     return resultTable;
   }
+
+  std::shared_ptr<arrow::Table> Interpreter::interpretMin(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    std::optional<Parser::Expression> optionalDistinctExpression = getExpressionByTokenType(TokenType::DistinctOperator, expression.expressions);
+    if (optionalDistinctExpression.has_value()) {
+      table = this->getDistinct(table);
+    }
+
+    std::optional<Parser::Expression> optionalAtomExpression = getExpressionByTokenType(TokenType::Atom, expression.expressions);
+     if (optionalAtomExpression.has_value()) {
+      Parser::Expression atomExpression = optionalAtomExpression.value();
+      table = interpretAtom(atomExpression, table);
+    } else {
+      this->logger->log(tablog::CRITICAL, "Missing columns expression!");
+      throw "Missing atom expression!";
+    }
+
+    std::shared_ptr<arrow::Table> resultTable = this->getMin(table);
+
+    std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions);
+    if (optionalAsExpression.has_value()) {
+      resultTable = interpretAs(resultTable->ColumnNames().at(0), optionalAsExpression.value(), resultTable);
+    }
+    
+    return resultTable;
+  }
+  
+  std::shared_ptr<arrow::Table> Interpreter::interpretMax(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    std::optional<Parser::Expression> optionalDistinctExpression = getExpressionByTokenType(TokenType::DistinctOperator, expression.expressions);
+    if (optionalDistinctExpression.has_value()) {
+      table = this->getDistinct(table);
+    }
+
+    std::optional<Parser::Expression> optionalAtomExpression = getExpressionByTokenType(TokenType::Atom, expression.expressions);
+     if (optionalAtomExpression.has_value()) {
+      Parser::Expression atomExpression = optionalAtomExpression.value();
+      table = interpretAtom(atomExpression, table);
+    } else {
+      this->logger->log(tablog::CRITICAL, "Missing columns expression!");
+      throw "Missing atom expression!";
+    }
+
+    std::shared_ptr<arrow::Table> resultTable = this->getMax(table);
+
+    std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions);
+    if (optionalAsExpression.has_value()) {
+      resultTable = interpretAs(resultTable->ColumnNames().at(0), optionalAsExpression.value(), resultTable);
+    }
+    
+    return resultTable;
+  }
+
 
   std::shared_ptr<arrow::Table> Interpreter::interpretAs(std::string originalColumnName, Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
     return this->getRenamedTable(originalColumnName, expression.expressions.at(0).token.getLexeme(), table);
