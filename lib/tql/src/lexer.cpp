@@ -44,7 +44,10 @@ namespace tql {
       }
     }    
 
-
+    if (currentToken.size() > 0) {
+      Token token(currentToken, TokenType::Atom);
+      tokens.push_back(token);
+    }
     
     Token token("", TokenType::Eof);
     tokens.push_back(token);
