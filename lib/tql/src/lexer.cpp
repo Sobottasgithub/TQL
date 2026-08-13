@@ -19,7 +19,30 @@ namespace tql {
   void Lexer::tokenize(const std::string query) {
     std::vector<Token> tokens = {};
 
-    
+    std::string currentToken = {""};
+    for (int index = 0; index < query.size(); ++index) {
+      std::string currentChar(1, query[index]);
+      if (currentChar.compare(" ") == 0) {
+        if (currentToken.size() == 0) {
+          currentToken = "";
+          continue;
+        }
+        Token token(currentToken, TokenType::Atom);
+        tokens.push_back(token);
+        currentToken = "";
+        continue;
+      }
+      
+      currentToken += currentChar;
+      TokenType currentTokenType = getTokenStringAsType(currentToken);
+      if (currentTokenType != TokenType::Invalid) {
+        Token token(currentToken, currentTokenType);
+        tokens.push_back(token);
+        currentToken = "";
+      } else {
+        // TODO: check if currentToken is part of token that was tokenized before
+      }
+    }    
 
 
     
@@ -47,26 +70,30 @@ namespace tql {
   }
 
   TokenType Lexer::getTokenStringAsType(std::string tokenString) {
-    if (tokenString == "SELECT")
+    if (tokenString.compare("SELECT") == 0)
       return TokenType::SelectOperator;
-    else if (tokenString == "DISTINCT")
+    else if (tokenString.compare("DISTINCT") == 0)
       return TokenType::DistinctOperator;
-    else if (tokenString == "AS")
+    else if (tokenString.compare("AS") == 0)
       return TokenType::AsOperator;
-    else if (tokenString == "COUNT")
+    else if (tokenString.compare("COUNT") == 0)
       return TokenType::CountOperator;
-    else if (tokenString == "MIN")
+    else if (tokenString.compare("MIN") == 0)
       return TokenType::MinOperator;
-    else if (tokenString == "MAX")
+    else if (tokenString.compare("MAX") == 0)
       return TokenType::MaxOperator;
-    else if (tokenString == "SUM")
+    else if (tokenString.compare("SUM") == 0)
       return TokenType::SumOperator;
-    else if (tokenString == "AVG")
+    else if (tokenString.compare("AVG") == 0)
       return TokenType::AvgOperator;
-    else if (tokenString == "FROM")
+    else if (tokenString.compare("FROM") == 0)
       return TokenType::FromOperator;
-    else if (tokenString == "*")
+    else if (tokenString.compare("*") == 0)
       return TokenType::All;
+    else if (tokenString.compare("(") == 0
+             || tokenString.compare(")") == 0
+             || tokenString.compare(",") == 0)
+      return TokenType::Delimiter;
     else
       return TokenType::Invalid;
   }
