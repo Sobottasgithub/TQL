@@ -32,6 +32,19 @@ namespace tql {
         currentToken = "";
         continue;
       }
+
+      TokenType currentCharTokenType = getTokenStringAsType(currentChar);
+      if (currentCharTokenType != TokenType::Invalid && getTokenStringAsType(currentToken) == TokenType::Invalid) {
+        if(currentToken.size() > 0) {
+          Token tokenAtom(currentToken, TokenType::Atom);
+          tokens.push_back(tokenAtom);
+          currentToken = "";
+        }
+
+        Token token(currentChar, currentCharTokenType);
+        tokens.push_back(token);
+        continue;
+      }
       
       currentToken += currentChar;
       TokenType currentTokenType = getTokenStringAsType(currentToken);
