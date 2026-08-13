@@ -23,7 +23,7 @@ namespace tql {
 
       std::vector<Token> tokens;
 
-      bool tokenIsInVector(std::vector<std::string> vector, std::string tokenString);
+       TokenType getTokenStringAsType(std::string tokenString);
   };
 }
 

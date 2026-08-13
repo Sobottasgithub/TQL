@@ -24,7 +24,8 @@ namespace tql {
     
     FromOperator,
     Operator,
-    Eof
+    Eof,
+    Invalid
   }; 
 }
 
