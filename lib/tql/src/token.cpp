@@ -44,6 +44,8 @@ namespace tql {
         return "From";
       case TokenType::Operator:
         return "Operator";
+      case TokenType::Invalid:
+        return "Invalid";
       case TokenType::Eof:
         return "Eof";
     }

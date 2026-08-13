@@ -40,7 +40,18 @@ namespace tql {
         tokens.push_back(token);
         currentToken = "";
       } else {
-        // TODO: check if currentToken is part of token that was tokenized before
+        if (tokens.size() <= 0)
+          continue;
+
+        Token lastToken = tokens.back();
+        std::string concatedTokenString = lastToken.getLexeme() + currentToken;
+        TokenType concatedTokenType = getTokenStringAsType(concatedTokenString);
+        if (concatedTokenType != TokenType::Invalid) {
+          tokens.pop_back();
+          Token token(currentToken, concatedTokenType);
+          tokens.push_back(token);
+          currentToken = "";
+        }
       }
     }    
 
