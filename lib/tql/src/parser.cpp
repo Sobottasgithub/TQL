@@ -30,46 +30,10 @@ namespace tql {
     if (lexer->peek().getType() == TokenType::SelectOperator) {
       selectExpression.token = lexer->next();
       
-      if (lexer->peek().getType() == TokenType::DistinctOperator) {
-        Expression distinctExpression;
-        distinctExpression.token = lexer->next();
-        selectExpression.expressions.push_back(distinctExpression);
-        
-        if (lexer->peek().getType() == TokenType::Atom) {
-          Parser::Expression result = parseColumns(lexer);
-          selectExpression.expressions.push_back(result);
-        } else if (lexer->peek().getType() == TokenType::All) {
-          Expression allExpression;
-          allExpression.token = lexer->next();
-          selectExpression.expressions.push_back(allExpression);
-        } else {
-          this->logger->log(tablog::ERROR, "Bad Token! Expected atom or *!");
-          throw "Bad Token";
-        }
-      } else {
-        int tokenType = lexer->peek().getType();
-        if (tokenType == TokenType::Atom) {
-          Parser::Expression result = parseColumns(lexer);
-          selectExpression.expressions.push_back(result);
-        } else if (tokenType == TokenType::All) {
-          Expression allExpression;
-          allExpression.token = lexer->next();
-          selectExpression.expressions.push_back(allExpression);
-        } else if (tokenType == TokenType::CountOperator) {
-          Parser::Expression result = parseCount(lexer);
-          selectExpression.expressions.push_back(result);
-        } else if (tokenType == TokenType::MinOperator) {
-          Parser::Expression result = parseMin(lexer);
-          selectExpression.expressions.push_back(result);
-        } else if (tokenType == TokenType::MaxOperator) {
-          Parser::Expression result = parseMax(lexer);
-          selectExpression.expressions.push_back(result);
-        } else {
-          this->logger->log(tablog::ERROR, "Bad Token! Expected atom or count operator!");
-          throw "Bad Token";
-        }
+      for (Parser::Expression expression : parseAggregateFunctions(lexer)) {
+        selectExpression.expressions.push_back(expression);
       }
-      
+
       Parser::Expression fromResult = parseFrom(lexer);
       selectExpression.expressions.push_back(fromResult);
 
@@ -116,6 +80,12 @@ namespace tql {
     return atomExpression;
   }
 
+  Parser::Expression Parser::parseAll(Lexer* lexer) {
+    Expression allExpression;
+    allExpression.token = lexer->next();
+    return allExpression;
+  }
+
   Parser::Expression Parser::parseAs(Lexer* lexer) {
     Expression asExpression;
 
@@ -155,8 +125,7 @@ namespace tql {
           throw "Bad Token";
         }
       } else if (lexer->peek().getType() == TokenType::All) {
-        Expression allExpression;
-        allExpression.token = lexer->next();
+        Parser::Expression allExpression = parseAll(lexer);
         countExpression.expressions.push_back(allExpression);
       } else {
         this->logger->log(tablog::ERROR, "Bad Token! Count expected * or distinct columns!");
@@ -241,6 +210,41 @@ namespace tql {
 
   Parser::Expression Parser::parseMin(Lexer* lexer) {
     return parseMinMax(lexer, TokenType::MinOperator);
+  }
+
+  std::vector<Parser::Expression> Parser::parseAggregateFunctions(Lexer* lexer) {
+    std::vector<Parser::Expression> resultExpressionCollection = {};
+    if (lexer->peek().getType() == TokenType::DistinctOperator) {
+      Expression distinctExpression;
+      distinctExpression.token = lexer->next();
+      resultExpressionCollection.push_back(distinctExpression);
+    
+      if (lexer->peek().getType() == TokenType::Atom) {
+        resultExpressionCollection.push_back(parseColumns(lexer));
+      } else if (lexer->peek().getType() == TokenType::All) {
+        resultExpressionCollection.push_back(parseAll(lexer));
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected atom or * after Distinct!");
+        throw "Bad Token";
+      }
+    } else {
+      int tokenType = lexer->peek().getType();
+      if (tokenType == TokenType::Atom) {
+        resultExpressionCollection.push_back(parseColumns(lexer));
+      } else if (tokenType == TokenType::All) {
+        resultExpressionCollection.push_back(parseAll(lexer));
+      } else if (tokenType == TokenType::CountOperator) {
+        resultExpressionCollection.push_back(parseCount(lexer));
+      } else if (tokenType == TokenType::MinOperator) {
+        resultExpressionCollection.push_back(parseMin(lexer));
+      } else if (tokenType == TokenType::MaxOperator) {
+        resultExpressionCollection.push_back(parseMax(lexer));
+      } else {
+        this->logger->log(tablog::ERROR, "Bad Token! Expected atom or count operator!");
+        throw "Bad Token";
+      }
+    }
+    return resultExpressionCollection;
   }
   
   Parser::Expression Parser::parseFrom(Lexer* lexer) {

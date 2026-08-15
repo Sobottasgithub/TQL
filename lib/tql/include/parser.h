@@ -29,11 +29,13 @@ namespace tql {
       Expression parseSelect(Lexer* lexer);
       Expression parseColumns(Lexer* lexer);
       Expression parseAtom(Lexer* lexer);
+      Expression parseAll(Lexer* lexer);
       Expression parseAs(Lexer* lexer);
       Expression parseCount(Lexer* lexer);
       Expression parseMinMax(Lexer* lexer, TokenType aggregateTokenType);
       Expression parseMax(Lexer* lexer);
       Expression parseMin(Lexer* lexer);
+      std::vector<Parser::Expression> parseAggregateFunctions(Lexer* lexer);
       Expression parseFrom(Lexer* lexer);
   };
 }
