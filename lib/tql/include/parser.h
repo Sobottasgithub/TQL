@@ -33,7 +33,9 @@ namespace tql {
                                                     TokenType::MaxOperator, TokenType::AvgOperator, TokenType::SumOperator, TokenType::Columns};
       std::vector<TokenType> atomParentTypes = {TokenType::SelectOperator, TokenType::CountOperator, TokenType::AvgOperator, TokenType::SumOperator,
                                                 TokenType::MaxOperator, TokenType::MinOperator, TokenType::AsOperator, TokenType::FromOperator};
-            
+      std::vector<TokenType> allParentTypes = {TokenType::SelectOperator, TokenType::MaxOperator, TokenType::MinOperator, TokenType::CountOperator,
+                                               TokenType::AvgOperator, TokenType::SumOperator};
+      
       Expression parseTokens(Lexer* lexer);
       Expression parseSelect(Lexer* lexer);
       Expression parseColumns(Lexer* lexer);

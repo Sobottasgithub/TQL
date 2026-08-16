@@ -119,6 +119,16 @@ namespace tql {
       return;
     }
 
+    // ALL (*)
+    if (std::find(this->atomParentTypes.begin(), this->atomParentTypes.end(), parentExpression->token.getType()) != this->atomParentTypes.end()
+        && lexer->peek().getType() == TokenType::All) {
+      Parser::Expression allExpression;
+      allExpression.token = lexer->next();
+
+      parentExpression->expressions.push_back(allExpression);
+      return;
+    }
+
     // AS
     if (parentExpression->token.getType() == TokenType::Atom && lexer->peek().getType() == TokenType::AsOperator) {
       Parser::Expression asExpression;
