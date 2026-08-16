@@ -20,11 +20,20 @@ namespace tql {
       };
       
       Parser();
-      Parser::Expression parse(Lexer lexer);
+      Expression parse(Lexer lexer);
       
     private:
       std::shared_ptr<tablog::Tablog> logger;
 
+      void parseRecursiv(Expression* parentExpression, Lexer* lexer);
+
+      std::vector<TokenType> selectChildTypes = {TokenType::DistinctOperator, TokenType::Atom, TokenType::All, TokenType::FromOperator,
+                                                 TokenType::CountOperator, TokenType::MinOperator, TokenType::MaxOperator, TokenType::Eof};
+      std::vector<TokenType> distinctParentTypes = {TokenType::SelectOperator, TokenType::CountOperator, TokenType::MinOperator,
+                                                    TokenType::MaxOperator, TokenType::AvgOperator, TokenType::SumOperator, TokenType::Columns};
+      std::vector<TokenType> atomParentTypes = {TokenType::SelectOperator, TokenType::CountOperator, TokenType::AvgOperator, TokenType::SumOperator,
+                                                TokenType::MaxOperator, TokenType::MinOperator, TokenType::AsOperator, TokenType::FromOperator};
+            
       Expression parseTokens(Lexer* lexer);
       Expression parseSelect(Lexer* lexer);
       Expression parseColumns(Lexer* lexer);

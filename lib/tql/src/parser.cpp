@@ -8,6 +8,8 @@
 
 #include <vector>
 #include <memory>
+#include <algorithm>
+#include <stdexcept>
 
 namespace tql {
   Parser::Parser() {
@@ -17,12 +19,138 @@ namespace tql {
   }
 
   Parser::Expression Parser::parse(Lexer lexer) {
+    Expression parentExpression;
     if (lexer.peek().getType() == TokenType::SelectOperator) {
-        return parseSelect(&lexer);
+      parentExpression.token = lexer.next();
+
+      while (lexer.peek().getType() != TokenType::Eof || lexer.peek().getType() == TokenType::Delimiter) {
+        parseRecursiv(&parentExpression, &lexer);
+      }
+
+      // INFO: Bundle atoms in columnsExpression
+      Parser::Expression columnsExpression;
+      columnsExpression.token = Token("", TokenType::Columns);
+      // Copy atoms to columnsExpression
+      std::vector<Parser::Expression>* selectChildExpressions = &parentExpression.expressions;
+      std::copy_if(selectChildExpressions->begin(), selectChildExpressions->end(), std::back_inserter(columnsExpression.expressions),
+        [](const Parser::Expression& expression) { return expression.token.getType() == TokenType::Atom; }
+      );
+      // Remove atoms from selecTExpression
+      selectChildExpressions->erase(
+        std::remove_if(selectChildExpressions->begin(), selectChildExpressions->end(),
+            [](const Parser::Expression& expression) { return expression.token.getType() == TokenType::Atom; }),
+        selectChildExpressions->end()
+      );
+      if (columnsExpression.expressions.size() > 0)
+        parentExpression.expressions.push_back(columnsExpression);
+
+      return parentExpression;
     } else {
       this->logger->log(tablog::ERROR, "Bad Token! Expected token of type Dml!");
       throw "Bad Token";
     }
+  }
+
+  void Parser::parseRecursiv(Parser::Expression* parentExpression, Lexer* lexer) {
+    // SELECT
+    if (parentExpression->token.getType() == TokenType::FromOperator
+        && lexer->peek().getType() == TokenType::SelectOperator) {
+      Parser::Expression selectExpression;
+      selectExpression.token = lexer->next();
+
+      while (lexer->peek().getType() != TokenType::Eof || lexer->peek().getType() == TokenType::Delimiter) {
+        parseRecursiv(&selectExpression, lexer);
+      }
+
+      // INFO: Bundle atoms in columnsExpression
+      Parser::Expression columnsExpression;
+      columnsExpression.token = Token("", TokenType::Columns);
+      // Copy atoms to columnsExpression
+      std::vector<Parser::Expression>* selectChildExpressions = &selectExpression.expressions;
+      std::copy_if(selectChildExpressions->begin(), selectChildExpressions->end(), std::back_inserter(columnsExpression.expressions),
+        [](const Parser::Expression& expression) { return expression.token.getType() == TokenType::Atom; }
+      );
+      // Remove atoms from selecTExpression
+      selectChildExpressions->erase(
+        std::remove_if(selectChildExpressions->begin(), selectChildExpressions->end(),
+            [](const Parser::Expression& expression) { return expression.token.getType() == TokenType::Atom; }),
+        selectChildExpressions->end()
+      );
+      selectExpression.expressions.push_back(columnsExpression);
+      
+      parentExpression->expressions.push_back(selectExpression);
+      return;
+    }
+
+    // DISTINCT
+    if (std::find(this->distinctParentTypes.begin(), this->distinctParentTypes.end(), parentExpression->token.getType()) != this->distinctParentTypes.end()
+        && lexer->peek().getType() == TokenType::DistinctOperator) {
+      Parser::Expression distinctExpression;
+      distinctExpression.token = lexer->next();
+      parentExpression->expressions.push_back(distinctExpression);
+
+      // WARNING: Passing the parentExpression to the parseRecursiv function is intentional here
+      // The DistinctOperator has no children itself
+      parseRecursiv(parentExpression, lexer);
+      return;
+    }
+
+    // FROM
+    if (parentExpression->token.getType() == TokenType::SelectOperator && lexer->peek().getType() == TokenType::FromOperator) {
+      Parser::Expression fromExpression;
+      fromExpression.token = lexer->next();
+      
+      parseRecursiv(&fromExpression, lexer);
+      parentExpression->expressions.push_back(fromExpression);
+      return;
+    }
+
+    // ATOM
+    if (std::find(this->atomParentTypes.begin(), this->atomParentTypes.end(), parentExpression->token.getType()) != this->atomParentTypes.end()
+        && lexer->peek().getType() == TokenType::Atom) {
+      Parser::Expression atomExpression;
+      atomExpression.token = lexer->next();
+
+      if (lexer->peek().getType() == TokenType::AsOperator) {
+        parseRecursiv(&atomExpression, lexer);
+      }
+
+      parentExpression->expressions.push_back(atomExpression);
+      return;
+    }
+
+    // AS
+    if (parentExpression->token.getType() == TokenType::Atom && lexer->peek().getType() == TokenType::AsOperator) {
+      Parser::Expression asExpression;
+      asExpression.token = lexer->next();
+
+      parseRecursiv(&asExpression, lexer);
+
+      parentExpression->expressions.push_back(asExpression);
+      return;
+    }
+
+    // EOF
+    if (lexer->peek().getType() == TokenType::Eof) {
+      Parser::Expression eofExpression;
+      eofExpression.token = lexer->next();
+      parentExpression->expressions.push_back(eofExpression);
+      return;
+    }
+
+    // DELIMITER
+    if (lexer->peek().getType() == TokenType::Delimiter) {
+      if (lexer->peek().getLexeme() == "(") {
+        lexer->next();
+        parseRecursiv(parentExpression, lexer);
+      } else {
+        lexer->next();
+      }
+
+      return;
+    }
+
+    throw std::invalid_argument("Bad Token! " + lexer->peek().getTypeAsString());
   }
 
   Parser::Expression Parser::parseSelect(Lexer* lexer) {

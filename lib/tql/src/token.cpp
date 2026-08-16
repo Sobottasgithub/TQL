@@ -6,7 +6,7 @@ namespace tql {
     this->type = type;
   }
 
-  enum TokenType Token::getType() {
+  enum TokenType Token::getType() const {
     return this->type;
   }
 
