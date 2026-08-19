@@ -26,14 +26,15 @@ namespace tql {
       std::shared_ptr<tablog::Tablog> logger;
 
       enum States {
-        Start,
         AfterSelect,
         All,
         Column,
         From,
-        AfterFrom
-        
+        AfterFrom,
+        Invalid
       };
+
+      Expression parseSelect(Lexer* lexer);
   };
 }
 
