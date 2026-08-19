@@ -93,7 +93,10 @@ namespace tql {
       return firstToken;
     }
     return Token();
+  }
 
+  int Lexer::getTokenCollectionSize() {
+    return this->tokens.size();
   }
 
   TokenType Lexer::getTokenStringAsType(std::string tokenString) {

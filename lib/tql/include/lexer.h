@@ -18,6 +18,8 @@ namespace tql {
       Token peek();
       Token next();
 
+      int getTokenCollectionSize();
+
     private:
       std::shared_ptr<tablog::Tablog> logger;
 
