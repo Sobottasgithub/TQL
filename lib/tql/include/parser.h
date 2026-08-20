@@ -32,7 +32,7 @@ namespace tql {
         Distinct,
         Aggregate,
         AggregateDistinct,
-        AggregateAtom,
+        AfterAggregate,
         From,
         AfterFrom,
         Invalid

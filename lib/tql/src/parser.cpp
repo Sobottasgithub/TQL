@@ -121,7 +121,11 @@ namespace tql {
               currentState = States::AggregateDistinct;
               continue;
             } else if (lexer->peek().getType() == TokenType::Atom) {
-              currentState = States::AggregateAtom;
+              currentState = States::AfterAggregate;
+              continue;
+            } else if (lexer->peek().getType() == TokenType::All && aggregateExpression.token.getType() == TokenType::CountOperator) {
+              // Only the count operator can be matched with the * operator, though the afterAggregate state isnt type dependent
+              currentState = States::AfterAggregate;
               continue;
             }
           }
@@ -135,14 +139,14 @@ namespace tql {
           currentOperatorExpression->expressions.push_back(distinctExpression);
 
           if (lexer->peek().getType() == TokenType::Atom) {
-            currentState = States::AggregateAtom;
+            currentState = States::AfterAggregate;
             continue;
           }
           currentState = States::Invalid;
           continue;
         }
 
-        case States::AggregateAtom: {
+        case States::AfterAggregate: {
           Expression atomExpression;
           atomExpression.token = lexer->next();
           currentOperatorExpression->expressions.push_back(atomExpression);
