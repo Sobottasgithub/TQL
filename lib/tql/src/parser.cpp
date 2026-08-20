@@ -8,7 +8,6 @@
 
 #include <vector>
 #include <memory>
-#include <algorithm>
 #include <stdexcept>
 
 namespace tql {
@@ -41,7 +40,6 @@ namespace tql {
       switch (currentState) {
         case States::AfterSelect: {
           TokenType currentType = lexer->peek().getType();
-          logger->log(tablog::DEBUG, "AfterSelect: " + lexer->peek().getTypeAsString());
 
           if (currentType == TokenType::All) {
             currentState = States::All;
@@ -159,7 +157,6 @@ namespace tql {
         }
 
         case States::From: {
-          logger->log(tablog::DEBUG, "FROM");
           Expression fromExpression;
           fromExpression.token = lexer->next();
 
@@ -172,8 +169,6 @@ namespace tql {
         }
 
         case States::AfterFrom: {
-          logger->log(tablog::DEBUG, "AfterFrom");
-
           if (lexer->peek().getType() == TokenType::Atom) {
             Expression atomExpression;
             atomExpression.token = lexer->next();
