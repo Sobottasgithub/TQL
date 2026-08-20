@@ -49,6 +49,12 @@ namespace tql {
             currentState = States::Column;
           } else if (currentType == TokenType::DistinctOperator) {
             currentState = States::Distinct;
+          } else if (currentType == TokenType::CountOperator ||
+                     currentType == TokenType::MinOperator ||
+                     currentType == TokenType::MaxOperator ||
+                     currentType == TokenType::SumOperator ||
+                     currentType == TokenType::AvgOperator) {
+            currentState = States::Aggregate;
           } else if (currentType == TokenType::FromOperator) {
             currentState = States::From;
           } else if (currentType == TokenType::Eof) {
@@ -101,6 +107,54 @@ namespace tql {
           distinctExpression.token = lexer->next();
           expression.expressions.push_back(distinctExpression);
           currentState = States::AfterSelect;
+          continue;
+        }
+
+        case States::Aggregate: {
+          Expression aggregateExpression;
+          aggregateExpression.token = lexer->next();
+          expression.expressions.push_back(aggregateExpression);
+          currentOperatorExpression = &expression.expressions.back();
+
+          if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == "(") {
+            lexer->next();
+
+            if (lexer->peek().getType() == TokenType::DistinctOperator) {
+              currentState = States::AggregateDistinct;
+              continue;
+            } else if (lexer->peek().getType() == TokenType::Atom) {
+              currentState = States::AggregateAtom;
+              continue;
+            }
+          }
+          currentState = States::Invalid;
+          continue;
+        }
+
+        case States::AggregateDistinct: {
+          Expression distinctExpression;
+          distinctExpression.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(distinctExpression);
+
+          if (lexer->peek().getType() == TokenType::Atom) {
+            currentState = States::AggregateAtom;
+            continue;
+          }
+          currentState = States::Invalid;
+          continue;
+        }
+
+        case States::AggregateAtom: {
+          Expression atomExpression;
+          atomExpression.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(atomExpression);
+
+          if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == ")") {
+            lexer->next();
+            currentState = States::AfterSelect;
+            continue;
+          }
+          currentState = States::Invalid;
           continue;
         }
 

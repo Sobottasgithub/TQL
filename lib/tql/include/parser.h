@@ -30,6 +30,9 @@ namespace tql {
         All,
         Column,
         Distinct,
+        Aggregate,
+        AggregateDistinct,
+        AggregateAtom,
         From,
         AfterFrom,
         Invalid
