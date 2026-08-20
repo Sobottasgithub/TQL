@@ -33,7 +33,6 @@ namespace tql {
 
   Parser::Expression Parser::parseSelect(Lexer* lexer) {
     Expression expression;
-    Expression* currentExpression = &expression;
     Expression* currentOperatorExpression = nullptr;
 
     Parser::States currentState = States::AfterSelect;
@@ -64,7 +63,7 @@ namespace tql {
         case States::All: {
           Expression allExpression;
           allExpression.token = lexer->next();
-          currentExpression->expressions.push_back(allExpression);
+          expression.expressions.push_back(allExpression);
           currentState = States::AfterSelect;
           continue;
         }
@@ -75,8 +74,8 @@ namespace tql {
           fromExpression.token = lexer->next();
 
           // Push first, then capture pointer to the vector's element
-          currentExpression->expressions.push_back(fromExpression);
-          currentOperatorExpression = &currentExpression->expressions.back();
+          expression.expressions.push_back(fromExpression);
+          currentOperatorExpression = &expression.expressions.back();
 
           currentState = States::AfterFrom;
           continue;
@@ -97,7 +96,22 @@ namespace tql {
           } else if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == "(") {
             lexer->next();
 
-            
+            Expression selectExpression;
+            if (lexer->peek().getType() == TokenType::SelectOperator) {
+              selectExpression.token = lexer->next();
+              Expression parsedSelectExpression = parseSelect(lexer);
+              selectExpression.expressions = parsedSelectExpression.expressions;
+              currentOperatorExpression->expressions.push_back(selectExpression);
+            } else {
+              throw std::invalid_argument("Expected SELECT");
+              continue;
+            }
+
+            if (lexer->peek().getType() != TokenType::Delimiter && lexer->peek().getLexeme() != ")") {
+              currentState = States::Invalid;
+              continue;
+            }
+            lexer->next();
           } else {
             currentState = States::Invalid;
           }
