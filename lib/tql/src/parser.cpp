@@ -60,6 +60,32 @@ namespace tql {
           continue;
         }
 
+        case States::Column: {
+          if (currentOperatorExpression == nullptr || currentOperatorExpression->token.getType() != TokenType::Columns) {
+            Expression columnExpression;
+            columnExpression.token = Token("", TokenType::Columns);
+            expression.expressions.push_back(columnExpression);
+            currentOperatorExpression = &expression.expressions.back();
+          }
+          if (lexer->peek().getType() != TokenType::Atom) {
+            currentState = States::Invalid;
+            continue;
+          }
+          
+          Expression columnAtom;
+          columnAtom.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(columnAtom);
+
+          if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == ",") {
+            lexer->next();
+            currentState = States::Column;
+            continue;
+          } else {
+            currentState = States::AfterSelect;
+            continue;
+          }
+        }
+
         case States::All: {
           Expression allExpression;
           allExpression.token = lexer->next();
