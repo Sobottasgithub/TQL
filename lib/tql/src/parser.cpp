@@ -47,6 +47,8 @@ namespace tql {
             currentState = States::All;
           } else if (currentType == TokenType::Atom) {
             currentState = States::Column;
+          } else if (currentType == TokenType::DistinctOperator) {
+            currentState = States::Distinct;
           } else if (currentType == TokenType::FromOperator) {
             currentState = States::From;
           } else if (currentType == TokenType::Eof) {
@@ -90,6 +92,14 @@ namespace tql {
           Expression allExpression;
           allExpression.token = lexer->next();
           expression.expressions.push_back(allExpression);
+          currentState = States::AfterSelect;
+          continue;
+        }
+
+        case States::Distinct: {
+          Expression distinctExpression;
+          distinctExpression.token = lexer->next();
+          expression.expressions.push_back(distinctExpression);
           currentState = States::AfterSelect;
           continue;
         }

@@ -29,6 +29,7 @@ namespace tql {
         AfterSelect,
         All,
         Column,
+        Distinct,
         From,
         AfterFrom,
         Invalid
