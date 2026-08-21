@@ -3,7 +3,6 @@
 #include "query_engine.h"
 
 #include <iostream>
-#include <string>
 #include <chrono>
 #include <memory>
 #include <arrow/table.h>
@@ -17,7 +16,7 @@ int main() {
     QueryEngine queryEngine;
 
     while (true) {
-        query = readline("Query> ");
+        query = readline("\033[106;97m TQL \033[0m> ");
             
         std::chrono::time_point start = std::chrono::steady_clock::now();
         std::shared_ptr<arrow::Table> resultTable = queryEngine.execute(query);

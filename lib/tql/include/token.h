@@ -12,7 +12,7 @@ namespace tql {
       Token() {};
       Token(std::string lexeme, enum TokenType type);
                                  
-      enum TokenType getType();
+      enum TokenType getType() const;
       std::string getLexeme();
 
       std::string getTypeAsString();

@@ -20,23 +20,25 @@ namespace tql {
       };
       
       Parser();
-      Parser::Expression parse(Lexer lexer);
+      Expression parse(Lexer lexer);
       
     private:
       std::shared_ptr<tablog::Tablog> logger;
 
-      Expression parseTokens(Lexer* lexer);
+      enum States {
+        AfterSelect,
+        All,
+        Column,
+        Distinct,
+        Aggregate,
+        AggregateDistinct,
+        AfterAggregate,
+        From,
+        AfterFrom,
+        Invalid
+      };
+
       Expression parseSelect(Lexer* lexer);
-      Expression parseColumns(Lexer* lexer);
-      Expression parseAtom(Lexer* lexer);
-      Expression parseAll(Lexer* lexer);
-      Expression parseAs(Lexer* lexer);
-      Expression parseCount(Lexer* lexer);
-      Expression parseMinMax(Lexer* lexer, TokenType aggregateTokenType);
-      Expression parseMax(Lexer* lexer);
-      Expression parseMin(Lexer* lexer);
-      std::vector<Parser::Expression> parseAggregateFunctions(Lexer* lexer);
-      Expression parseFrom(Lexer* lexer);
   };
 }
 

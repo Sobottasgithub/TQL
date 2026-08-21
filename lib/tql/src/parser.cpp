@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <memory>
+#include <stdexcept>
 
 namespace tql {
   Parser::Parser() {
@@ -16,266 +17,204 @@ namespace tql {
     this->logger = logger;
   }
 
+
   Parser::Expression Parser::parse(Lexer lexer) {
+    Expression expression;
     if (lexer.peek().getType() == TokenType::SelectOperator) {
-        return parseSelect(&lexer);
+      expression.token = lexer.next();
+      Expression parsedSelectExpression = parseSelect(&lexer);
+      expression.expressions = parsedSelectExpression.expressions;
     } else {
-      this->logger->log(tablog::ERROR, "Bad Token! Expected token of type Dml!");
-      throw "Bad Token";
+      throw std::invalid_argument("Expected SELECT");
     }
+    return expression;
   }
 
   Parser::Expression Parser::parseSelect(Lexer* lexer) {
-    Parser::Expression selectExpression;
-    if (lexer->peek().getType() == TokenType::SelectOperator) {
-      selectExpression.token = lexer->next();
-      
-      for (Parser::Expression expression : parseAggregateFunctions(lexer)) {
-        selectExpression.expressions.push_back(expression);
-      }
+    Expression expression;
+    Expression* currentOperatorExpression = nullptr;
 
-      Parser::Expression fromResult = parseFrom(lexer);
-      selectExpression.expressions.push_back(fromResult);
+    Parser::States currentState = States::AfterSelect;
 
-      return selectExpression;
-    } else {
-      this->logger->log(tablog::ERROR, "Bad Token! Expected token of type SELECT!");
-      throw "Bad Token";
-    }
-    return selectExpression;
-  }
+    while(lexer->peek().getType() != TokenType::Eof) {
+      switch (currentState) {
+        case States::AfterSelect: {
+          TokenType currentType = lexer->peek().getType();
 
-  Parser::Expression Parser::parseColumns(Lexer* lexer) {
-    Expression columnsExpression;
-    columnsExpression.token = Token("", TokenType::Columns);
-
-    do {
-      if (lexer->peek().getLexeme().compare(",") == 0)
-        lexer->next();
-      
-      if (lexer->peek().getType() == TokenType::Atom) {
-        Parser::Expression parsedAtom = parseAtom(lexer);
-        columnsExpression.expressions.push_back(parsedAtom);
-      }
-    } while (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare(",") == 0);
-    
-    return columnsExpression;    
-  }
-
-  Parser::Expression Parser::parseAtom(Lexer* lexer) {
-    Expression atomExpression;
-
-    if (lexer->peek().getType() == TokenType::Atom) {
-        atomExpression.token = lexer->next();
-    } else {
-      this->logger->log(tablog::ERROR, "Bad Token! Expected Atom!");
-      throw "Bad Token";
-    }
-
-    if (lexer->peek().getType() == TokenType::AsOperator) {
-      Parser::Expression parsedAs = parseAs(lexer);
-      atomExpression.expressions.push_back(parsedAs);
-    }
-
-    return atomExpression;
-  }
-
-  Parser::Expression Parser::parseAll(Lexer* lexer) {
-    Expression allExpression;
-    allExpression.token = lexer->next();
-    return allExpression;
-  }
-
-  Parser::Expression Parser::parseAs(Lexer* lexer) {
-    Expression asExpression;
-
-    if (lexer->peek().getType() == TokenType::AsOperator) {
-      asExpression.token = lexer->next();
-      
-      Parser::Expression parsedAtom = parseAtom(lexer);
-      asExpression.expressions.push_back(parsedAtom);
-    }
-
-    return asExpression;
-  }
-  
-  Parser::Expression Parser::parseCount(Lexer* lexer) {
-    Expression countExpression;
-
-    if (lexer->peek().getType() == TokenType::CountOperator) {
-      countExpression.token = lexer->next();
-
-      // INFO: Delimiters are not added to parser tree
-      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare("(") == 0) {
-        lexer->next();
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: '(' !");
-        throw "Bad Token";
-      }
-
-      if (lexer->peek().getType() == TokenType::DistinctOperator) {
-        Expression distinctExpression;
-        distinctExpression.token = lexer->next();
-        
-        if (lexer->peek().getType() == TokenType::Atom) {
-          Parser::Expression result = parseColumns(lexer);
-          countExpression.expressions.push_back(result);
-        } else {
-          this->logger->log(tablog::ERROR, "Bad Token! Count Distinct expects column names!");
-          throw "Bad Token";
+          if (currentType == TokenType::All) {
+            currentState = States::All;
+          } else if (currentType == TokenType::Atom) {
+            currentState = States::Column;
+          } else if (currentType == TokenType::DistinctOperator) {
+            currentState = States::Distinct;
+          } else if (currentType == TokenType::CountOperator ||
+                     currentType == TokenType::MinOperator ||
+                     currentType == TokenType::MaxOperator ||
+                     currentType == TokenType::SumOperator ||
+                     currentType == TokenType::AvgOperator) {
+            currentState = States::Aggregate;
+          } else if (currentType == TokenType::FromOperator) {
+            currentState = States::From;
+          } else if (currentType == TokenType::Eof) {
+            logger->log(tablog::DEBUG, "EOF");
+            // Return when end of File is reached
+            return expression;
+          } else {
+            // Return inner Select
+            return expression;
+          }
+          continue;
         }
-      } else if (lexer->peek().getType() == TokenType::All) {
-        Parser::Expression allExpression = parseAll(lexer);
-        countExpression.expressions.push_back(allExpression);
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Count expected * or distinct columns!");
-        throw "Bad Token";
-      }
 
-      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare(")") == 0) {
-        lexer->next();
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
-        throw "Bad Token";
-      }
+        case States::Column: {
+          if (currentOperatorExpression == nullptr || currentOperatorExpression->token.getType() != TokenType::Columns) {
+            Expression columnExpression;
+            columnExpression.token = Token("", TokenType::Columns);
+            expression.expressions.push_back(columnExpression);
+            currentOperatorExpression = &expression.expressions.back();
+          }
+          if (lexer->peek().getType() != TokenType::Atom) {
+            currentState = States::Invalid;
+            continue;
+          }
+          
+          Expression columnAtom;
+          columnAtom.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(columnAtom);
 
-      if (lexer->peek().getType() == TokenType::AsOperator) {
-        Parser::Expression parsedAs = parseAs(lexer);
-        countExpression.expressions.push_back(parsedAs);
-      }
-    } else {
-      this->logger->log(tablog::ERROR, "Bad Token! Expected Count!");
-      throw "Bad Token";
-    }
-
-    return countExpression;
-  }
-
-  Parser::Expression Parser::parseMinMax(Lexer* lexer, TokenType aggregateTokenType) {
-    Expression minMaxExpression;
-
-    if (lexer->peek().getType() == aggregateTokenType) {
-      minMaxExpression.token = lexer->next();
-
-      // INFO: Delimiters are not added to parser tree
-      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare("(") == 0) {
-        lexer->next();
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: '(' !");
-        throw "Bad Token";
-      }
-
-      if (lexer->peek().getType() == TokenType::DistinctOperator) {
-        Expression distinctExpression;
-        distinctExpression.token = lexer->next();
-        
-        if (lexer->peek().getType() == TokenType::Atom) {
-          Parser::Expression result = parseAtom(lexer);
-          distinctExpression.expressions.push_back(result);
-        } else {
-          this->logger->log(tablog::ERROR, "Bad Token! Min Distinct expects a column name!");
-          throw "Bad Token";
+          if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == ",") {
+            lexer->next();
+            currentState = States::Column;
+            continue;
+          } else {
+            currentState = States::AfterSelect;
+            continue;
+          }
         }
-        minMaxExpression.expressions.push_back(distinctExpression);
-      } else if (lexer->peek().getType() == TokenType::Atom) {
-        Parser::Expression result = parseAtom(lexer);
-        minMaxExpression.expressions.push_back(result);
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Min/Max Distinct expects a column name!");
-        throw "Bad Token";
-      }
-      
-      if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare(")") == 0) {
-        lexer->next();
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected delimiter: ')' !");
-        throw "Bad Token";
-      }
 
-      if (lexer->peek().getType() == TokenType::AsOperator) {
-        Parser::Expression parsedAs = parseAs(lexer);
-        minMaxExpression.expressions.push_back(parsedAs);
-      }
-    } else {
-      this->logger->log(tablog::ERROR, "Bad Token! Expected Min/Max!");
-      throw "Bad Token";
-    }
+        case States::All: {
+          Expression allExpression;
+          allExpression.token = lexer->next();
+          expression.expressions.push_back(allExpression);
+          currentState = States::AfterSelect;
+          continue;
+        }
 
-    return minMaxExpression;
-  }
+        case States::Distinct: {
+          Expression distinctExpression;
+          distinctExpression.token = lexer->next();
+          expression.expressions.push_back(distinctExpression);
+          currentState = States::AfterSelect;
+          continue;
+        }
 
-  Parser::Expression Parser::parseMax(Lexer* lexer) {
-    return parseMinMax(lexer, TokenType::MaxOperator);
-  }
+        case States::Aggregate: {
+          Expression aggregateExpression;
+          aggregateExpression.token = lexer->next();
+          expression.expressions.push_back(aggregateExpression);
+          currentOperatorExpression = &expression.expressions.back();
 
-  Parser::Expression Parser::parseMin(Lexer* lexer) {
-    return parseMinMax(lexer, TokenType::MinOperator);
-  }
+          if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == "(") {
+            lexer->next();
 
-  std::vector<Parser::Expression> Parser::parseAggregateFunctions(Lexer* lexer) {
-    std::vector<Parser::Expression> resultExpressionCollection = {};
-    if (lexer->peek().getType() == TokenType::DistinctOperator) {
-      Expression distinctExpression;
-      distinctExpression.token = lexer->next();
-      resultExpressionCollection.push_back(distinctExpression);
-    
-      if (lexer->peek().getType() == TokenType::Atom) {
-        resultExpressionCollection.push_back(parseColumns(lexer));
-      } else if (lexer->peek().getType() == TokenType::All) {
-        resultExpressionCollection.push_back(parseAll(lexer));
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected atom or * after Distinct!");
-        throw "Bad Token";
-      }
-    } else {
-      int tokenType = lexer->peek().getType();
-      if (tokenType == TokenType::Atom) {
-        resultExpressionCollection.push_back(parseColumns(lexer));
-      } else if (tokenType == TokenType::All) {
-        resultExpressionCollection.push_back(parseAll(lexer));
-      } else if (tokenType == TokenType::CountOperator) {
-        resultExpressionCollection.push_back(parseCount(lexer));
-      } else if (tokenType == TokenType::MinOperator) {
-        resultExpressionCollection.push_back(parseMin(lexer));
-      } else if (tokenType == TokenType::MaxOperator) {
-        resultExpressionCollection.push_back(parseMax(lexer));
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected atom or count operator!");
-        throw "Bad Token";
-      }
-    }
-    return resultExpressionCollection;
-  }
-  
-  Parser::Expression Parser::parseFrom(Lexer* lexer) {
-    Expression fromExpression;
+            if (lexer->peek().getType() == TokenType::DistinctOperator) {
+              currentState = States::AggregateDistinct;
+              continue;
+            } else if (lexer->peek().getType() == TokenType::Atom) {
+              currentState = States::AfterAggregate;
+              continue;
+            } else if (lexer->peek().getType() == TokenType::All && aggregateExpression.token.getType() == TokenType::CountOperator) {
+              // Only the count operator can be matched with the * operator, though the afterAggregate state isnt type dependent
+              currentState = States::AfterAggregate;
+              continue;
+            }
+          }
+          currentState = States::Invalid;
+          continue;
+        }
 
-    if (lexer->peek().getType() == TokenType::FromOperator) {
-      fromExpression.token = lexer->next();
-      if (lexer->peek().getType() == TokenType::Atom) {
-        Parser::Expression parsedAtom = parseAtom(lexer);
-        fromExpression.expressions.push_back(parsedAtom);
-      } else if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme().compare("(") == 0) {
-          lexer->next();
-          if (lexer->peek().getType() == TokenType::SelectOperator) {
-            Parser::Expression selectResult = parseSelect(lexer);
-            fromExpression.expressions.push_back(selectResult);
-            
-            if (lexer->peek().getLexeme().compare(")") != 0) {
-              this->logger->log(tablog::ERROR, "Bad Token! Expected closing Delimiter after Select operator in From operation!");
-              throw "Bad Token";
+        case States::AggregateDistinct: {
+          Expression distinctExpression;
+          distinctExpression.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(distinctExpression);
+
+          if (lexer->peek().getType() == TokenType::Atom) {
+            currentState = States::AfterAggregate;
+            continue;
+          }
+          currentState = States::Invalid;
+          continue;
+        }
+
+        case States::AfterAggregate: {
+          Expression atomExpression;
+          atomExpression.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(atomExpression);
+
+          if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == ")") {
+            lexer->next();
+            currentState = States::AfterSelect;
+            continue;
+          }
+          currentState = States::Invalid;
+          continue;
+        }
+
+        case States::From: {
+          Expression fromExpression;
+          fromExpression.token = lexer->next();
+
+          // Push first, then capture pointer to the vector's element
+          expression.expressions.push_back(fromExpression);
+          currentOperatorExpression = &expression.expressions.back();
+
+          currentState = States::AfterFrom;
+          continue;
+        }
+
+        case States::AfterFrom: {
+          if (lexer->peek().getType() == TokenType::Atom) {
+            Expression atomExpression;
+            atomExpression.token = lexer->next();
+
+            if (currentOperatorExpression) {
+              currentOperatorExpression->expressions.push_back(atomExpression);
             }
 
+            currentState = States::AfterSelect;
+          } else if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == "(") {
+            lexer->next();
+
+            Expression selectExpression;
+            if (lexer->peek().getType() == TokenType::SelectOperator) {
+              selectExpression.token = lexer->next();
+              Expression parsedSelectExpression = parseSelect(lexer);
+              selectExpression.expressions = parsedSelectExpression.expressions;
+              currentOperatorExpression->expressions.push_back(selectExpression);
+            } else {
+              throw std::invalid_argument("Expected SELECT");
+              continue;
+            }
+
+            if (lexer->peek().getType() != TokenType::Delimiter && lexer->peek().getLexeme() != ")") {
+              currentState = States::Invalid;
+              continue;
+            }
             lexer->next();
           } else {
-            this->logger->log(tablog::ERROR, "Bad Token! Expected Select operator after Delimiter!");
-            throw "Bad Token";
+            currentState = States::Invalid;
           }
-      } else {
-        this->logger->log(tablog::ERROR, "Bad Token! Expected Atom or Delimiter after From operator!");
-        throw "Bad Token";
+          continue;
+        }
+        
+        case States::Invalid: {
+          throw std::invalid_argument("Invalid State or Token! " + lexer->peek().getTypeAsString());
+        }
+        default: {
+          throw std::invalid_argument("Invalid State or Token! " + lexer->peek().getTypeAsString());
+        }
       }
     }
-    return fromExpression;
+    return expression;
   }
 }
