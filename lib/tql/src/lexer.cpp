@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 namespace tql {
   Lexer::Lexer() {
@@ -100,6 +101,7 @@ namespace tql {
   }
 
   TokenType Lexer::getTokenStringAsType(std::string tokenString) {
+    std::transform(tokenString.begin(), tokenString.end(), tokenString.begin(), ::toupper);
     if (tokenString.compare("SELECT") == 0)
       return TokenType::SelectOperator;
     else if (tokenString.compare("DISTINCT") == 0)
