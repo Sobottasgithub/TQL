@@ -72,19 +72,10 @@ namespace tql {
   }
 
   void QueryEngine::displayExpressionTree(Parser::Expression expression) {
-      // Post order
-      if (expression.token.getType() == TokenType::Columns) {
-          for (int index = 0; index < expression.expressions.size(); index++) {
-              displayExpressionTree(expression.expressions[index]);
-          }
-      } else {
-          if (expression.expressions.size() >= 2) // Right side
-              displayExpressionTree(expression.expressions[1]);
-          
-          if (expression.expressions.size() >= 1) // Left side
-              displayExpressionTree(expression.expressions[0]);
+      for (int index = 0; index < expression.expressions.size(); index++) {
+          displayExpressionTree(expression.expressions[index]);
       }
-
+ 
       if (expression.token.getType() == TokenType::Atom)
           this->logger->log(tablog::DEBUG, expression.token.getTypeAsString() + " -> " + expression.token.getLexeme());
       else

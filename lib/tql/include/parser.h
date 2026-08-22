@@ -35,6 +35,9 @@ namespace tql {
         AfterAggregate,
         From,
         AfterFrom,
+        Where,
+        AfterWhereInfixAtom,
+        AfterWhereInfixOperator,
         Invalid
       };
 
