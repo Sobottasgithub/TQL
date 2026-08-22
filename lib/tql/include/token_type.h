@@ -23,6 +23,11 @@ namespace tql {
     AvgOperator,
     
     FromOperator,
+
+    // Where,
+    WhereOperator,
+    EqualOperator,
+    
     Operator,
     Eof,
     Invalid

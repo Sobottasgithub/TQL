@@ -120,6 +120,10 @@ namespace tql {
       return TokenType::FromOperator;
     else if (tokenString.compare("*") == 0)
       return TokenType::All;
+    else if (tokenString.compare("WHERE") == 0)
+      return TokenType::WhereOperator;
+    else if (tokenString.compare("=") == 0)
+      return TokenType::EqualOperator;
     else if (tokenString.compare("(") == 0
              || tokenString.compare(")") == 0
              || tokenString.compare(",") == 0)
