@@ -16,6 +16,7 @@
 #include <arrow/acero/options.h>
 #include <arrow/compute/api.h>
 #include <arrow/compute/expression.h>
+#include <arrow/dataset/api.h>
 #include <arrow/acero/util.h>
 #include <arrow/acero/exec_plan.h>
 
@@ -62,7 +63,50 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getWhere(std::string operatorName, std::string columnName, std::string compareValue, std::shared_ptr<arrow::Table> table) {
-    throw "Invalid!";
+    if (!table || table->num_rows() == 0) {
+      return table;
+    }
+
+    // 1. Get column target data type
+    int col_idx = table->schema()->GetFieldIndex(columnName);
+    if (col_idx == -1) {
+      return nullptr;
+    }
+    auto target_type = table->schema()->field(col_idx)->type();
+
+    // 2. Cast string value to target type
+    auto string_scalar = std::make_shared<arrow::StringScalar>(compareValue);
+    arrow::Result<arrow::Datum> cast_result = 
+        arrow::compute::Cast(arrow::Datum(string_scalar), target_type);
+
+    if (!cast_result.ok()) {
+      return nullptr;
+    }
+
+    std::shared_ptr<arrow::Scalar> converted_scalar = cast_result.ValueUnsafe().scalar();
+
+    // 3. Build filter expression
+    arrow::compute::Expression filter_expr = arrow::compute::equal(
+        arrow::compute::field_ref(columnName),
+        arrow::compute::literal(converted_scalar)
+    );
+
+    // 4. Set up Acero Declaration
+    arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
+        {"table_source", arrow::acero::TableSourceNodeOptions(table)},
+        {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
+    });
+
+    // 5. Execute using default ExecContext internally
+    // DeclarationToTable uses arrow::compute::default_exec_context() by default
+    arrow::Result<std::shared_ptr<arrow::Table>> exec_res = 
+        arrow::acero::DeclarationToTable(declaration, /*use_threads=*/false);
+
+    if (!exec_res.ok()) {
+      return nullptr;
+    }
+
+    return exec_res.ValueUnsafe();
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::selectColumns(std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
