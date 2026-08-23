@@ -3,6 +3,7 @@
 #include "../include/token_type.h"
 
 #include <arrow/table.h>
+#include <stdexcept>
 #include <tablog.h>
 #include <memory>
 #include <optional>
@@ -28,6 +29,10 @@ namespace tql {
 
   void Interpreter::setOpenFile(OpenFile openFile) {
     this->openFile = std::move(openFile);
+  }
+
+  void Interpreter::setGetWhere(GetWhere getWhere) {
+    this->getWhere = std::move(getWhere);
   }
 
   void Interpreter::setSelectColumns(SelectColumns selectColumns) {
@@ -72,8 +77,14 @@ namespace tql {
       Parser::Expression fromExpression = optionalFromExpression.value();
       resultTable = interpretFrom(fromExpression);
     } else {
-      this->logger->log(tablog::CRITICAL, "Missing From expression!");
-      throw "Missing From expression!";
+      throw std::invalid_argument("Missing From expression!");
+    }
+
+    // INFO: Interpret WHERE
+    std::optional<Parser::Expression> optionalWhereExpression = getExpressionByTokenType(TokenType::WhereOperator, expression.expressions);
+    if (optionalWhereExpression.has_value()) {
+      Parser::Expression whereExpression = optionalWhereExpression.value();
+      resultTable = interpretWhere(whereExpression, resultTable);
     }
 
     // INFO: Interpret SELECT
@@ -123,6 +134,17 @@ namespace tql {
       throw "Undefined behaviour in from for token type";
     }
     return nullptr;
+  }
+
+  std::shared_ptr<arrow::Table> Interpreter::interpretWhere(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    Parser::Expression childExpression = expression.expressions.at(0);
+    std::string operatorName = childExpression.token.getLexeme();
+    Parser::Expression leftChildExpression = childExpression.expressions.at(0);
+    std::string columnName = leftChildExpression.token.getLexeme();
+    Parser::Expression rightChildExpression = childExpression.expressions.at(1);
+    std::string compareValue = rightChildExpression.token.getLexeme();
+
+    return getWhere(operatorName, columnName, compareValue, table);
   }
 
   std::shared_ptr<arrow::Table> Interpreter::interpretColumns(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {

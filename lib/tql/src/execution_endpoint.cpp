@@ -1,7 +1,9 @@
 #include "../include/execution_endpoint.h"
 
+#include <arrow/chunked_array.h>
 #include <arrow/scalar.h>
 #include <arrow/type.h>
+#include <stdexcept>
 #include <tablog.h>
 #include <filesystem>
 #include <memory>
@@ -13,6 +15,7 @@
 #include <arrow/acero/exec_plan.h>
 #include <arrow/acero/options.h>
 #include <arrow/compute/api.h>
+#include <arrow/compute/expression.h>
 #include <arrow/acero/util.h>
 #include <arrow/acero/exec_plan.h>
 
@@ -56,6 +59,10 @@ namespace tql {
       throw std::invalid_argument( "Invalid filepath!" );
       return nullptr;
     }
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getWhere(std::string operatorName, std::string columnName, std::string compareValue, std::shared_ptr<arrow::Table> table) {
+    throw "Invalid!";
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::selectColumns(std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {

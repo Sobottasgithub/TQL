@@ -25,6 +25,10 @@ namespace tql {
         return executionEndpoint.openFile(filePath);
     });
 
+    this->interpreter.setGetWhere([&executionEndpoint](std::string operatorName, std::string columnName, std::string compareValue, std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getWhere(operatorName, columnName, compareValue, table);
+    });
+
     this->interpreter.setSelectColumns([&executionEndpoint](std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
         return executionEndpoint.selectColumns(columnNames, table);
     });

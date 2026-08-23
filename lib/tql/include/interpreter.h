@@ -14,6 +14,7 @@ namespace tql {
   class Interpreter {
     public:
       using OpenFile = std::function<std::shared_ptr<arrow::Table>(std::string)>;
+      using GetWhere = std::function<std::shared_ptr<arrow::Table>(std::string, std::string, std::string, std::shared_ptr<arrow::Table>)>;
       using SelectColumns = std::function<std::shared_ptr<arrow::Table>(std::vector<std::string>, std::shared_ptr<arrow::Table>)>;
       using GetDistinct = std::function<std::shared_ptr<arrow::Table>(std::shared_ptr<arrow::Table>)>;
       using GetCount = std::function<std::shared_ptr<arrow::Table>(std::shared_ptr<arrow::Table>)>;
@@ -24,6 +25,7 @@ namespace tql {
       Interpreter();
 
       void setOpenFile(OpenFile openFile);
+      void setGetWhere(GetWhere getWhere);
       void setSelectColumns(SelectColumns selectColumns);
       void setGetDistinct(GetDistinct getDistinct);
       void setGetCount(GetCount getCount);
@@ -37,6 +39,7 @@ namespace tql {
       std::shared_ptr<tablog::Tablog> logger;
 
       OpenFile openFile;
+      GetWhere getWhere;
       SelectColumns selectColumns;
       GetDistinct getDistinct;
       GetCount getCount;
@@ -46,6 +49,7 @@ namespace tql {
 
       std::shared_ptr<arrow::Table> interpretSelect(Parser::Expression expression);
       std::shared_ptr<arrow::Table> interpretFrom(Parser::Expression expression);
+      std::shared_ptr<arrow::Table> interpretWhere(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> interpretColumns(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> interpretAtom(Parser::Expression expression, std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> interpretDistinct(std::shared_ptr<arrow::Table>);
