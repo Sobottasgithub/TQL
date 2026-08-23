@@ -1,132 +1,163 @@
 #include "../include/execution_endpoint.h"
 
-#include <arrow/chunked_array.h>
-#include <arrow/scalar.h>
-#include <arrow/type.h>
-#include <stdexcept>
-#include <tablog.h>
-#include <filesystem>
-#include <memory>
-#include <arrow/table.h>
-#include <arrow/csv/api.h>
-#include <arrow/io/api.h>
 #include <arrow/api.h>
-#include <arrow/csv/options.h>
 #include <arrow/acero/exec_plan.h>
 #include <arrow/acero/options.h>
+#include <arrow/acero/util.h>
 #include <arrow/compute/api.h>
 #include <arrow/compute/expression.h>
-#include <arrow/dataset/api.h>
-#include <arrow/acero/util.h>
-#include <arrow/acero/exec_plan.h>
+#include <arrow/compute/initialize.h>
+#include <arrow/csv/api.h>
+#include <arrow/csv/options.h>
+#include <arrow/io/api.h>
+#include <arrow/scalar.h>
+#include <arrow/table.h>
+#include <arrow/type.h>
+
+#include <filesystem>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <tablog.h>
+#include <utility>
 
 namespace tql {
+  namespace {
+    std::runtime_error arrowError(std::string context, const arrow::Status& status) {
+      return std::runtime_error(context + ": " + status.ToString());
+    }
+
+    template <typename T>
+    T unwrapOrThrow(arrow::Result<T> result, std::string context) {
+      if (!result.ok()) {
+        throw arrowError(std::move(context), result.status());
+      }
+
+      return std::move(result).ValueOrDie();
+    }
+
+    void requireTable(const std::shared_ptr<arrow::Table>& table, const std::string& operationName) {
+      if (!table) {
+        throw std::invalid_argument(operationName + " requires a table");
+      }
+    }
+  }
+
   ExecutionEndpoint::ExecutionEndpoint() {
     std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
     logger->configure("ExecutionEndpoint", true);
     this->logger = logger;
+
+    arrow::Status status = arrow::compute::Initialize();
+    if (!status.ok()) {
+      throw arrowError("Unable to initialize Arrow compute", status);
+    }
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::openFile(std::string filePath) {
-    if (std::filesystem::exists(filePath)) {
-      arrow::io::IOContext ioContext = arrow::io::default_io_context();
+    std::filesystem::path path = std::filesystem::absolute(filePath).lexically_normal();
 
-      arrow::Result<std::shared_ptr<arrow::io::ReadableFile>> maybeFile = arrow::io::ReadableFile::Open(filePath);
-      std::shared_ptr<arrow::io::InputStream> fileInput = *maybeFile;
-
-      arrow::csv::ReadOptions readOptions = arrow::csv::ReadOptions::Defaults();
-      arrow::csv::ParseOptions parseOptions = arrow::csv::ParseOptions::Defaults();
-      arrow::csv::ConvertOptions convertOptions = arrow::csv::ConvertOptions::Defaults();
-
-      arrow::Result<std::shared_ptr<arrow::csv::TableReader>> maybeReader = arrow::csv::TableReader::Make(ioContext,
-                                                      fileInput,
-                                                      readOptions,
-                                                      parseOptions,
-                                                      convertOptions);
-      if (!maybeReader.ok()) {
-        this->logger->log(tablog::CRITICAL, "Error while instantiating TableReader!");
-        throw "Error while instantiating TableReader!";
-      }
-      std::shared_ptr<arrow::csv::TableReader> reader = *maybeReader;
-
-      arrow::Result<std::shared_ptr<arrow::Table>> maybeTable = reader->Read();
-      if (!maybeTable.ok()) {
-        this->logger->log(tablog::CRITICAL, "Error while read table from CSV file!");
-        throw "Error while read table from CSV file!";
-      }
-      std::shared_ptr<arrow::Table> table = maybeTable.ValueOrDie();
-      return std::move(table);
-    } else {
-      throw std::invalid_argument( "Invalid filepath!" );
-      return nullptr;
+    if (!std::filesystem::exists(path) || !std::filesystem::is_regular_file(path)) {
+      throw std::invalid_argument("Invalid filepath: " + filePath);
     }
+
+    const std::string cacheKey = path.string();
+    const std::filesystem::file_time_type lastWriteTime = std::filesystem::last_write_time(path);
+    const std::uintmax_t fileSize = std::filesystem::file_size(path);
+
+    auto cachedTable = this->tableCache.find(cacheKey);
+    if (cachedTable != this->tableCache.end()
+        && cachedTable->second.lastWriteTime == lastWriteTime
+        && cachedTable->second.fileSize == fileSize) {
+      return cachedTable->second.table;
+    }
+
+    arrow::io::IOContext ioContext = arrow::io::default_io_context();
+    std::shared_ptr<arrow::io::ReadableFile> file = unwrapOrThrow(
+        arrow::io::ReadableFile::Open(cacheKey),
+        "Unable to open CSV file");
+    std::shared_ptr<arrow::io::InputStream> fileInput = file;
+
+    arrow::csv::ReadOptions readOptions = arrow::csv::ReadOptions::Defaults();
+    arrow::csv::ParseOptions parseOptions = arrow::csv::ParseOptions::Defaults();
+    arrow::csv::ConvertOptions convertOptions = arrow::csv::ConvertOptions::Defaults();
+
+    readOptions.use_threads = true;
+
+    std::shared_ptr<arrow::csv::TableReader> reader = unwrapOrThrow(
+        arrow::csv::TableReader::Make(ioContext,
+                                      fileInput,
+                                      readOptions,
+                                      parseOptions,
+                                      convertOptions),
+        "Unable to instantiate CSV TableReader");
+
+    std::shared_ptr<arrow::Table> table = unwrapOrThrow(
+        reader->Read(),
+        "Unable to read CSV table");
+
+    this->tableCache[cacheKey] = CachedTable{lastWriteTime, fileSize, table};
+    return table;
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getWhere(std::string operatorName, std::string columnName, std::string compareValue, std::shared_ptr<arrow::Table> table) {
-    if (!table || table->num_rows() == 0) {
-      return table;
-    }
+    requireTable(table, "WHERE");
 
-    // 1. Get column target data type
     int col_idx = table->schema()->GetFieldIndex(columnName);
     if (col_idx == -1) {
-      return nullptr;
+      throw std::invalid_argument("Unknown or ambiguous WHERE column: " + columnName);
     }
+
     auto target_type = table->schema()->field(col_idx)->type();
-
-    // 2. Cast string value to target type
     auto string_scalar = std::make_shared<arrow::StringScalar>(compareValue);
-    arrow::Result<arrow::Datum> cast_result = 
-        arrow::compute::Cast(arrow::Datum(string_scalar), target_type);
+    arrow::Datum cast_result = unwrapOrThrow(
+        arrow::compute::Cast(arrow::Datum(string_scalar), target_type),
+        "Unable to cast WHERE value '" + compareValue + "' to " + target_type->ToString());
 
-    if (!cast_result.ok()) {
-      return nullptr;
+    std::shared_ptr<arrow::Scalar> converted_scalar = cast_result.scalar();
+    arrow::compute::Expression field = arrow::compute::field_ref(columnName);
+    arrow::compute::Expression literal = arrow::compute::literal(converted_scalar);
+
+    if (operatorName != "=") {
+      throw std::invalid_argument("Unsupported WHERE operator: " + operatorName);
     }
 
-    std::shared_ptr<arrow::Scalar> converted_scalar = cast_result.ValueUnsafe().scalar();
+    arrow::compute::Expression filter_expr = arrow::compute::equal(field, literal);
 
-    // 3. Build filter expression
-    arrow::compute::Expression filter_expr = arrow::compute::equal(
-        arrow::compute::field_ref(columnName),
-        arrow::compute::literal(converted_scalar)
-    );
-
-    // 4. Set up Acero Declaration
     arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
         {"table_source", arrow::acero::TableSourceNodeOptions(table)},
         {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
     });
 
-    // 5. Execute using default ExecContext internally
-    // DeclarationToTable uses arrow::compute::default_exec_context() by default
-    arrow::Result<std::shared_ptr<arrow::Table>> exec_res = 
-        arrow::acero::DeclarationToTable(declaration, /*use_threads=*/false);
-
-    if (!exec_res.ok()) {
-      return nullptr;
-    }
-
-    return exec_res.ValueUnsafe();
+    return unwrapOrThrow(
+        arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true),
+        "Unable to execute WHERE filter");
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::selectColumns(std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
+    requireTable(table, "SELECT");
+
     std::vector<int> columnIndices;
+    columnIndices.reserve(columnNames.size());
 
     for (int index = 0; index < columnNames.size(); ++index) {
       int columnIndex = table->schema()->GetFieldIndex(columnNames.at(index));
 
-      if (columnIndex != -1)
-        columnIndices.push_back(columnIndex);
+      if (columnIndex == -1) {
+        throw std::invalid_argument("Unknown or ambiguous SELECT column: " + columnNames.at(index));
+      }
+
+      columnIndices.push_back(columnIndex);
     }
     
-    arrow::Result<std::shared_ptr<arrow::Table>> resultTable = table->SelectColumns(columnIndices);
-
-    if (resultTable.ok())
-      return std::move(resultTable.ValueOrDie());
-    return nullptr;
+    return unwrapOrThrow(
+        table->SelectColumns(columnIndices),
+        "Unable to select columns");
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getDistinct(std::shared_ptr<arrow::Table> table) {    
+    requireTable(table, "DISTINCT");
+
     arrow::acero::Declaration source{
         "table_source", 
         arrow::acero::TableSourceNodeOptions(table)
@@ -145,76 +176,78 @@ namespace tql {
 
     arrow::acero::Declaration plan = arrow::acero::Declaration::Sequence({source, aggregate});
 
-    return std::move(arrow::acero::DeclarationToTable(plan).ValueOrDie());
+    return unwrapOrThrow(
+        arrow::acero::DeclarationToTable(plan, /*use_threads=*/true),
+        "Unable to execute DISTINCT");
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getCount(std::shared_ptr<arrow::Table> table) {
-    return makeSingleColumnSingleRowTable("min", table->num_rows());
+    requireTable(table, "COUNT");
+
+    return makeSingleColumnSingleRowTable(
+        "count",
+        std::make_shared<arrow::Int64Scalar>(table->num_rows()));
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getMin(std::shared_ptr<arrow::Table> table) {
-    int64_t minIntValue;
-    std::shared_ptr<arrow::Int64Scalar> initIntScalar = getScalarValueFromIndex(table, 0, 0);
-    if (!initIntScalar->is_valid)
-      throw "Invalid column type for Min";
-    minIntValue = initIntScalar->value;  
-
-    // Starting with 1 because we already set the init value of minIntValue to the value of rowIndex 0
-    for (int rowIndex = 1; rowIndex < table->num_rows(); ++rowIndex) {
-      std::shared_ptr<arrow::Int64Scalar> intScalar = getScalarValueFromIndex(table, 0, rowIndex);
-      if (intScalar->value < minIntValue)
-        minIntValue = intScalar->value;
-    }
-
-    return makeSingleColumnSingleRowTable("min", minIntValue);
+    return aggregateMinMax("min", table, 0);
   }
   
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getMax(std::shared_ptr<arrow::Table> table) {
-    int64_t maxIntValue;
-    std::shared_ptr<arrow::Int64Scalar> initIntScalar = getScalarValueFromIndex(table, 0, 0);
-    if (!initIntScalar->is_valid)
-      throw "Invalid column type for Min";
-    maxIntValue = initIntScalar->value;  
-
-    // Starting with 1 because we already set the init value of minIntValue to the value of rowIndex 0
-    for (int rowIndex = 1; rowIndex < table->num_rows(); ++rowIndex) {
-      std::shared_ptr<arrow::Int64Scalar> intScalar = getScalarValueFromIndex(table, 0, rowIndex);
-      if (intScalar->value > maxIntValue)
-        maxIntValue = intScalar->value;
-    }
-
-    return makeSingleColumnSingleRowTable("min", maxIntValue);
+    return aggregateMinMax("max", table, 1);
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {    
+    requireTable(table, "AS");
+
     int columnIndex = table->schema()->GetFieldIndex(originalColumnName);
-    std::shared_ptr<arrow::Field> old_field = table->field(columnIndex);
-    std::shared_ptr<arrow::Field> new_field = old_field->WithName(newColumnName);
-
-    std::shared_ptr<arrow::ChunkedArray> column_data = table->column(columnIndex);
-
-    return std::move(table->SetColumn(columnIndex, new_field, column_data).ValueOrDie());
-  }
-
-  std::shared_ptr<arrow::Int64Scalar> ExecutionEndpoint::getScalarValueFromIndex(std::shared_ptr<arrow::Table> table, int columnIndex, int rowIndex) {
-    std::shared_ptr<arrow::Scalar> scalar = table->column(columnIndex)->GetScalar(rowIndex).ValueOrDie();
-    std::shared_ptr<arrow::Int64Scalar> intScalar = std::static_pointer_cast<arrow::Int64Scalar>(scalar);
-    return intScalar;
-  }
-
-  std::shared_ptr<arrow::Table> ExecutionEndpoint::makeSingleColumnSingleRowTable(std::string fieldName, int value) {
-    arrow::Int64Builder builder;
-    arrow::Status status = builder.Append(value);
-    if (!status.ok()) {
-      throw "Unable to calc count";
+    if (columnIndex == -1) {
+      throw std::invalid_argument("Unknown or ambiguous column for AS: " + originalColumnName);
     }
-    
-    std::shared_ptr<arrow::Array> array;
-    status = builder.Finish(&array);
-    std::shared_ptr<arrow::Field> field = arrow::field(fieldName, arrow::int64());
+
+    std::vector<std::string> columnNames = table->ColumnNames();
+    columnNames[columnIndex] = newColumnName;
+
+    return unwrapOrThrow(
+        table->RenameColumns(columnNames),
+        "Unable to rename column");
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::aggregateMinMax(std::string fieldName, std::shared_ptr<arrow::Table> table, int resultIndex) {
+    requireTable(table, fieldName);
+
+    if (table->num_columns() != 1) {
+      throw std::invalid_argument(fieldName + " requires exactly one input column");
+    }
+
+    arrow::compute::ScalarAggregateOptions options;
+    options.skip_nulls = true;
+    options.min_count = 1;
+
+    arrow::Datum result = unwrapOrThrow(
+        arrow::compute::MinMax(arrow::Datum(table->column(0)), options),
+        "Unable to calculate " + fieldName);
+
+    const auto& minMaxScalar = result.scalar_as<arrow::StructScalar>();
+    if (resultIndex < 0 || resultIndex >= minMaxScalar.value.size()) {
+      throw std::runtime_error("Arrow MinMax returned an unexpected result shape");
+    }
+
+    return makeSingleColumnSingleRowTable(fieldName, minMaxScalar.value.at(resultIndex));
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::makeSingleColumnSingleRowTable(std::string fieldName, std::shared_ptr<arrow::Scalar> value) {
+    if (!value) {
+      throw std::invalid_argument("Cannot build result table from a null scalar pointer");
+    }
+
+    std::shared_ptr<arrow::Array> array = unwrapOrThrow(
+        arrow::MakeArrayFromScalar(*value, 1),
+        "Unable to build scalar result array");
+    std::shared_ptr<arrow::Field> field = arrow::field(fieldName, value->type);
     std::shared_ptr<arrow::Schema> schema = arrow::schema({field});
     std::shared_ptr<arrow::Table> resultTable = arrow::Table::Make(schema, {array});
 
-    return std::move(resultTable);
+    return resultTable;
   }
 }

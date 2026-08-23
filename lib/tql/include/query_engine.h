@@ -8,6 +8,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "interpreter.h"
+#include "execution_endpoint.h"
 
 namespace tql {
   class QueryEngine {
@@ -22,6 +23,7 @@ namespace tql {
       std::shared_ptr<tablog::Tablog> logger;
       
       Parser parser;
+      ExecutionEndpoint executionEndpoint;
       Interpreter interpreter;
   };
 }

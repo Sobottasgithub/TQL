@@ -2,8 +2,13 @@
 #define EXECUTION_ENDPOINT_H
 
 #include <tablog.h>
+#include <cstdint>
+#include <filesystem>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
+#include <arrow/scalar.h>
 #include <arrow/table.h>
 
 namespace tql {
@@ -21,10 +26,17 @@ namespace tql {
       std::shared_ptr<arrow::Table> getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table);
 
     private:
-      std::shared_ptr<tablog::Tablog> logger;
+      struct CachedTable {
+        std::filesystem::file_time_type lastWriteTime;
+        std::uintmax_t fileSize;
+        std::shared_ptr<arrow::Table> table;
+      };
 
-      std::shared_ptr<arrow::Int64Scalar> getScalarValueFromIndex(std::shared_ptr<arrow::Table> table, int columnIndex, int rowIndex);
-      std::shared_ptr<arrow::Table> makeSingleColumnSingleRowTable(std::string fieldName, int value); 
+      std::shared_ptr<tablog::Tablog> logger;
+      std::unordered_map<std::string, CachedTable> tableCache;
+
+      std::shared_ptr<arrow::Table> aggregateMinMax(std::string fieldName, std::shared_ptr<arrow::Table> table, int resultIndex);
+      std::shared_ptr<arrow::Table> makeSingleColumnSingleRowTable(std::string fieldName, std::shared_ptr<arrow::Scalar> value);
   };
 }
 
