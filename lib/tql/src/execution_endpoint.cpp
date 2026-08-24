@@ -142,37 +142,34 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getMin(std::shared_ptr<arrow::Table> table) {
-    int64_t minIntValue;
-    std::shared_ptr<arrow::Int64Scalar> initIntScalar = getScalarValueFromIndex(table, 0, 0);
-    if (!initIntScalar->is_valid)
-      throw "Invalid column type for Min";
-    minIntValue = initIntScalar->value;  
-
-    // Starting with 1 because we already set the init value of minIntValue to the value of rowIndex 0
-    for (int rowIndex = 1; rowIndex < table->num_rows(); ++rowIndex) {
-      std::shared_ptr<arrow::Int64Scalar> intScalar = getScalarValueFromIndex(table, 0, rowIndex);
-      if (intScalar->value < minIntValue)
-        minIntValue = intScalar->value;
-    }
-
-    return makeSingleColumnSingleRowTable("min", minIntValue);
+    const arrow::StructScalar minMaxScalar = getMinMaxAggregate(table);
+    std::shared_ptr<arrow::Scalar> minScalar = minMaxScalar.field("min").ValueOrDie();
+    int minValue = std::static_pointer_cast<arrow::Int64Scalar>(minScalar)->value;
+    
+    return makeSingleColumnSingleRowTable("max", minValue);
   }
   
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getMax(std::shared_ptr<arrow::Table> table) {
-    int64_t maxIntValue;
-    std::shared_ptr<arrow::Int64Scalar> initIntScalar = getScalarValueFromIndex(table, 0, 0);
-    if (!initIntScalar->is_valid)
-      throw "Invalid column type for Min";
-    maxIntValue = initIntScalar->value;  
+    const arrow::StructScalar minMaxScalar = getMinMaxAggregate(table);
+    std::shared_ptr<arrow::Scalar> maxScalar = minMaxScalar.field("max").ValueOrDie();
+    int maxValue = std::static_pointer_cast<arrow::Int64Scalar>(maxScalar)->value;
+    
+    return makeSingleColumnSingleRowTable("max", maxValue);
+  }
 
-    // Starting with 1 because we already set the init value of minIntValue to the value of rowIndex 0
-    for (int rowIndex = 1; rowIndex < table->num_rows(); ++rowIndex) {
-      std::shared_ptr<arrow::Int64Scalar> intScalar = getScalarValueFromIndex(table, 0, rowIndex);
-      if (intScalar->value > maxIntValue)
-        maxIntValue = intScalar->value;
+  const arrow::StructScalar ExecutionEndpoint::getMinMaxAggregate(std::shared_ptr<arrow::Table> table) {
+    if (table->num_columns() != 1) {
+      throw std::invalid_argument("Requires exactly one input column");
     }
 
-    return makeSingleColumnSingleRowTable("min", maxIntValue);
+    arrow::compute::ScalarAggregateOptions options;
+    options.skip_nulls = true;
+    options.min_count = 1;
+
+    arrow::Datum result = arrow::compute::MinMax(arrow::Datum(table->column(0)), options).ValueOrDie();
+
+    const arrow::StructScalar minMaxScalar = result.scalar_as<arrow::StructScalar>();
+    return minMaxScalar;
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {    
