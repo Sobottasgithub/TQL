@@ -1,8 +1,5 @@
 #include "../include/execution_endpoint.h"
 
-#include <arrow/chunked_array.h>
-#include <arrow/scalar.h>
-#include <arrow/type.h>
 #include <stdexcept>
 #include <tablog.h>
 #include <filesystem>
@@ -12,19 +9,30 @@
 #include <arrow/io/api.h>
 #include <arrow/api.h>
 #include <arrow/csv/options.h>
+#include <arrow/csv/api.h>
 #include <arrow/acero/exec_plan.h>
 #include <arrow/acero/options.h>
 #include <arrow/compute/api.h>
 #include <arrow/compute/expression.h>
+#include <arrow/compute/initialize.h>
 #include <arrow/dataset/api.h>
 #include <arrow/acero/util.h>
 #include <arrow/acero/exec_plan.h>
+#include <arrow/acero/util.h>
+#include <arrow/chunked_array.h>
+#include <arrow/scalar.h>
+#include <arrow/type.h>
 
 namespace tql {
   ExecutionEndpoint::ExecutionEndpoint() {
     std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
     logger->configure("ExecutionEndpoint", true);
     this->logger = logger;
+
+    arrow::Status status = arrow::compute::Initialize();
+    if (!status.ok()) {
+      throw "Unable to initialize Arrow compute";
+    }
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::openFile(std::string filePath) {
@@ -63,50 +71,31 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getWhere(std::string operatorName, std::string columnName, std::string compareValue, std::shared_ptr<arrow::Table> table) {
-    if (!table || table->num_rows() == 0) {
-      return table;
-    }
-
-    // 1. Get column target data type
     int col_idx = table->schema()->GetFieldIndex(columnName);
     if (col_idx == -1) {
-      return nullptr;
+      throw std::invalid_argument("Unknown or ambiguous WHERE column: " + columnName);
     }
+
     auto target_type = table->schema()->field(col_idx)->type();
-
-    // 2. Cast string value to target type
     auto string_scalar = std::make_shared<arrow::StringScalar>(compareValue);
-    arrow::Result<arrow::Datum> cast_result = 
-        arrow::compute::Cast(arrow::Datum(string_scalar), target_type);
+    arrow::Datum cast_result = arrow::compute::Cast(arrow::Datum(string_scalar), target_type).ValueOrDie();
 
-    if (!cast_result.ok()) {
-      return nullptr;
+    std::shared_ptr<arrow::Scalar> converted_scalar = cast_result.scalar();
+    arrow::compute::Expression field = arrow::compute::field_ref(columnName);
+    arrow::compute::Expression literal = arrow::compute::literal(converted_scalar);
+
+    if (operatorName != "=") {
+      throw std::invalid_argument("Unsupported WHERE operator: " + operatorName);
     }
 
-    std::shared_ptr<arrow::Scalar> converted_scalar = cast_result.ValueUnsafe().scalar();
+    arrow::compute::Expression filter_expr = arrow::compute::equal(field, literal);
 
-    // 3. Build filter expression
-    arrow::compute::Expression filter_expr = arrow::compute::equal(
-        arrow::compute::field_ref(columnName),
-        arrow::compute::literal(converted_scalar)
-    );
-
-    // 4. Set up Acero Declaration
     arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
         {"table_source", arrow::acero::TableSourceNodeOptions(table)},
         {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
     });
 
-    // 5. Execute using default ExecContext internally
-    // DeclarationToTable uses arrow::compute::default_exec_context() by default
-    arrow::Result<std::shared_ptr<arrow::Table>> exec_res = 
-        arrow::acero::DeclarationToTable(declaration, /*use_threads=*/false);
-
-    if (!exec_res.ok()) {
-      return nullptr;
-    }
-
-    return exec_res.ValueUnsafe();
+    return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::selectColumns(std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
