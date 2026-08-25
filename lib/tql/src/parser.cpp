@@ -225,9 +225,13 @@ namespace tql {
             static Expression atomExpression;
             atomExpression.token = lexer->next();
             whereOperandCache = &atomExpression;
-            if (lexer->peek().getType() == TokenType::EqualOperator ||
-                lexer->peek().getType() == TokenType::GreaterOperator ||
-                lexer->peek().getType() == TokenType::SmallerOperator) {
+            TokenType peekType = lexer->peek().getType();
+            if (peekType == TokenType::EqualOperator ||
+                peekType == TokenType::GreaterOperator ||
+                peekType == TokenType::SmallerOperator ||
+                peekType == TokenType::GreaterEqualOperator ||
+                peekType == TokenType::SmallerEqualOperator ||
+                peekType == TokenType::UnequalOperator) {
               currentState = States::AfterWhereInfixOperator;
             } else {
               currentState = States::Invalid;
