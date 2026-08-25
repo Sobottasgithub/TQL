@@ -23,6 +23,7 @@ namespace tql {
     std::string currentToken = {""};
     for (int index = 0; index < query.size(); ++index) {
       std::string currentChar(1, query[index]);
+      // Create atom
       if (currentChar.compare(" ") == 0) {
         if (currentToken.size() == 0) {
           currentToken = "";
@@ -34,6 +35,7 @@ namespace tql {
         continue;
       }
 
+      // Current char is an operator, current token is an atom
       TokenType currentCharTokenType = getTokenStringAsType(currentChar);
       if (currentCharTokenType != TokenType::Invalid && getTokenStringAsType(currentToken) == TokenType::Invalid) {
         if(currentToken.size() > 0) {
@@ -42,23 +44,53 @@ namespace tql {
           currentToken = "";
         }
 
+        // Check if current char + previous Token = valid Operator
+        if (tokens.size() > 0) {
+          Token lastToken = tokens.back();
+          std::string concatedTokenString = lastToken.getLexeme() + currentChar;
+          TokenType concatedTokenType = getTokenStringAsType(concatedTokenString);
+          if (concatedTokenType != TokenType::Invalid) {
+            tokens.pop_back();
+            Token token(concatedTokenString, concatedTokenType);
+            tokens.push_back(token);
+            continue;
+          }
+        }
+
         Token token(currentChar, currentCharTokenType);
         tokens.push_back(token);
         continue;
       }
-      
+
+      // Current Token is an operator
       currentToken += currentChar;
       TokenType currentTokenType = getTokenStringAsType(currentToken);
       if (currentTokenType != TokenType::Invalid) {
-        Token token(currentToken, currentTokenType);
-        tokens.push_back(token);
+        if (tokens.size() > 0) {
+          // Test if previous token + current token = valid Operator
+          Token lastToken = tokens.back();
+          std::string concatedTokenString = lastToken.getLexeme() + currentToken;
+          TokenType concatedTokenType = getTokenStringAsType(concatedTokenString);
+          if (concatedTokenType != TokenType::Invalid) {
+            tokens.pop_back();
+            Token token(concatedTokenString, concatedTokenType);
+            tokens.push_back(token); 
+          } else {
+            Token token(currentToken, currentTokenType);
+            tokens.push_back(token); 
+          }
+        } else {
+          Token token(currentToken, currentTokenType);
+          tokens.push_back(token);
+        }
         currentToken = "";
       } else {
+        // Current Token is not an operator
         if (tokens.size() <= 0)
           continue;
 
         Token lastToken = tokens.back();
-        std::string concatedTokenString = lastToken.getLexeme() + currentToken;
+        std::string concatedTokenString = lastToken.getLexeme() + currentToken; // Combine with previous Token
         TokenType concatedTokenType = getTokenStringAsType(concatedTokenString);
         if (concatedTokenType != TokenType::Invalid) {
           tokens.pop_back();
@@ -133,7 +165,7 @@ namespace tql {
     else if (tokenString.compare("<") == 0)
       return TokenType::SmallerOperator;
     else if (tokenString.compare(">=") == 0)
-      return TokenType::SmallerEqualOperator;
+      return TokenType::GreaterEqualOperator;
     else if (tokenString.compare("<=") == 0)
       return TokenType::SmallerEqualOperator;
     else if (tokenString.compare("(") == 0
