@@ -29,6 +29,9 @@ namespace tql {
     EqualOperator,
     GreaterOperator,
     SmallerOperator,
+    UnequalOperator,
+    GreaterEqualOperator,
+    SmallerEqualOperator,
     
     Operator,
     Eof,

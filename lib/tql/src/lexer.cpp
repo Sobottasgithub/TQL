@@ -126,10 +126,16 @@ namespace tql {
       return TokenType::WhereOperator;
     else if (tokenString.compare("=") == 0)
       return TokenType::EqualOperator;
+    else if (tokenString.compare("!=") == 0)
+      return TokenType::UnequalOperator;
     else if (tokenString.compare(">") == 0)
       return TokenType::GreaterOperator;
     else if (tokenString.compare("<") == 0)
       return TokenType::SmallerOperator;
+    else if (tokenString.compare(">=") == 0)
+      return TokenType::SmallerEqualOperator;
+    else if (tokenString.compare("<=") == 0)
+      return TokenType::SmallerEqualOperator;
     else if (tokenString.compare("(") == 0
              || tokenString.compare(")") == 0
              || tokenString.compare(",") == 0)
