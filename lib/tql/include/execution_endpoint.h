@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <arrow/table.h>
+#include <arrow/compute/expression.h>
 
 namespace tql {
   class ExecutionEndpoint {
@@ -25,7 +26,8 @@ namespace tql {
       std::shared_ptr<tablog::Tablog> logger;
 
       std::shared_ptr<arrow::Int64Scalar> getScalarValueFromIndex(std::shared_ptr<arrow::Table> table, int columnIndex, int rowIndex);
-      std::shared_ptr<arrow::Table> makeSingleColumnSingleRowTable(std::string fieldName, int value); 
+      std::shared_ptr<arrow::Table> makeSingleColumnSingleRowTable(std::string fieldName, int value);
+      std::shared_ptr<arrow::Table> computeWhereFunction(arrow::compute::Expression filterExpression, std::shared_ptr<arrow::Table> table);
   };
 }
 

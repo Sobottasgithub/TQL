@@ -86,29 +86,14 @@ namespace tql {
 
     arrow::compute::Expression filter_expr;
     if (operatorName == "<") {
-      arrow::compute::Expression filter_expr = arrow::compute::less(field, literal);
-      arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
-        {"table_source", arrow::acero::TableSourceNodeOptions(table)},
-        {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
-      });
-
-      return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
+      arrow::compute::Expression filterExpression = arrow::compute::less(field, literal);
+      return computeWhereFunction(filterExpression, table);
     } else if (operatorName == ">") {
-      arrow::compute::Expression filter_expr = arrow::compute::greater(field, literal);
-      arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
-        {"table_source", arrow::acero::TableSourceNodeOptions(table)},
-        {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
-      });
-
-      return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
+      arrow::compute::Expression filterExpression = arrow::compute::greater(field, literal);
+      return computeWhereFunction(filterExpression, table);
     } else if (operatorName == "=") {
-      arrow::compute::Expression filter_expr = arrow::compute::equal(field, literal);
-      arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
-        {"table_source", arrow::acero::TableSourceNodeOptions(table)},
-        {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
-      });
-
-      return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
+      arrow::compute::Expression filterExpression = arrow::compute::equal(field, literal);
+      return computeWhereFunction(filterExpression, table);
     } else {
       throw std::invalid_argument("Unsupported WHERE operator: " + operatorName);
     }
@@ -218,5 +203,14 @@ namespace tql {
     std::shared_ptr<arrow::Table> resultTable = arrow::Table::Make(schema, {array});
 
     return std::move(resultTable);
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::computeWhereFunction(arrow::compute::Expression filterExpression, std::shared_ptr<arrow::Table> table) {
+    arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
+      {"table_source", arrow::acero::TableSourceNodeOptions(table)},
+      {"filter", arrow::acero::FilterNodeOptions(filterExpression)}
+    });
+
+    return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
   }
 }
