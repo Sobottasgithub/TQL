@@ -84,18 +84,34 @@ namespace tql {
     arrow::compute::Expression field = arrow::compute::field_ref(columnName);
     arrow::compute::Expression literal = arrow::compute::literal(converted_scalar);
 
-    if (operatorName != "=") {
-      throw std::invalid_argument("Unsupported WHERE operator: " + operatorName);
-    }
-
-    arrow::compute::Expression filter_expr = arrow::compute::equal(field, literal);
-
-    arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
+    arrow::compute::Expression filter_expr;
+    if (operatorName == "<") {
+      arrow::compute::Expression filter_expr = arrow::compute::less(field, literal);
+      arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
         {"table_source", arrow::acero::TableSourceNodeOptions(table)},
         {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
-    });
+      });
 
-    return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
+      return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
+    } else if (operatorName == ">") {
+      arrow::compute::Expression filter_expr = arrow::compute::greater(field, literal);
+      arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
+        {"table_source", arrow::acero::TableSourceNodeOptions(table)},
+        {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
+      });
+
+      return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
+    } else if (operatorName == "=") {
+      arrow::compute::Expression filter_expr = arrow::compute::equal(field, literal);
+      arrow::acero::Declaration declaration = arrow::acero::Declaration::Sequence({
+        {"table_source", arrow::acero::TableSourceNodeOptions(table)},
+        {"filter", arrow::acero::FilterNodeOptions(filter_expr)}
+      });
+
+      return std::move(arrow::acero::DeclarationToTable(declaration, /*use_threads=*/true).ValueOrDie());
+    } else {
+      throw std::invalid_argument("Unsupported WHERE operator: " + operatorName);
+    }
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::selectColumns(std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
