@@ -27,6 +27,8 @@ namespace tql {
     // Where,
     WhereOperator,
     EqualOperator,
+    GreaterOperator,
+    SmallerOperator,
     
     Operator,
     Eof,
