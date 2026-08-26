@@ -71,28 +71,36 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getWhere(std::string operatorName, std::string columnName, std::string compareValue, std::shared_ptr<arrow::Table> table) {
-    int col_idx = table->schema()->GetFieldIndex(columnName);
-    if (col_idx == -1) {
+    int columnIndex = table->schema()->GetFieldIndex(columnName);
+    if (columnIndex == -1) {
       throw std::invalid_argument("Unknown or ambiguous WHERE column: " + columnName);
     }
 
-    auto target_type = table->schema()->field(col_idx)->type();
-    auto string_scalar = std::make_shared<arrow::StringScalar>(compareValue);
-    arrow::Datum cast_result = arrow::compute::Cast(arrow::Datum(string_scalar), target_type).ValueOrDie();
+    auto targetType = table->schema()->field(columnIndex)->type();
+    auto stringScalar = std::make_shared<arrow::StringScalar>(compareValue);
+    arrow::Datum castResult = arrow::compute::Cast(arrow::Datum(stringScalar), targetType).ValueOrDie();
 
-    std::shared_ptr<arrow::Scalar> converted_scalar = cast_result.scalar();
+    std::shared_ptr<arrow::Scalar> convertedScalar = castResult.scalar();
     arrow::compute::Expression field = arrow::compute::field_ref(columnName);
-    arrow::compute::Expression literal = arrow::compute::literal(converted_scalar);
+    arrow::compute::Expression literal = arrow::compute::literal(convertedScalar);
 
-    arrow::compute::Expression filter_expr;
-    if (operatorName == "<") {
+    if (operatorName.compare("<") == 0) {
       arrow::compute::Expression filterExpression = arrow::compute::less(field, literal);
       return computeWhereFunction(filterExpression, table);
-    } else if (operatorName == ">") {
+    } else if (operatorName.compare(">") == 0) {
       arrow::compute::Expression filterExpression = arrow::compute::greater(field, literal);
       return computeWhereFunction(filterExpression, table);
-    } else if (operatorName == "=") {
+    } else if (operatorName.compare(">=") == 0) {
+      arrow::compute::Expression filterExpression = arrow::compute::greater_equal(field, literal);
+      return computeWhereFunction(filterExpression, table);
+    } else if (operatorName.compare("<=") == 0) {
+      arrow::compute::Expression filterExpression = arrow::compute::less_equal(field, literal);
+      return computeWhereFunction(filterExpression, table);
+    } else if (operatorName.compare("=") == 0) {
       arrow::compute::Expression filterExpression = arrow::compute::equal(field, literal);
+      return computeWhereFunction(filterExpression, table);
+    } else if (operatorName.compare("!=") == 0) {
+      arrow::compute::Expression filterExpression = arrow::compute::not_equal(field, literal);
       return computeWhereFunction(filterExpression, table);
     } else {
       throw std::invalid_argument("Unsupported WHERE operator: " + operatorName);
