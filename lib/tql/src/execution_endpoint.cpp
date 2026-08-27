@@ -1,5 +1,6 @@
 #include "../include/execution_endpoint.h"
 
+#include <arrow/compute/api_vector.h>
 #include <stdexcept>
 #include <tablog.h>
 #include <filesystem>
@@ -179,6 +180,50 @@ namespace tql {
 
     const arrow::StructScalar minMaxScalar = result.scalar_as<arrow::StructScalar>();
     return minMaxScalar;
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getAvg(std::shared_ptr<arrow::Table> table) {
+    if (table->num_columns() != 1) {
+      throw std::invalid_argument("Requires exactly one input column");
+    }
+
+    arrow::compute::ScalarAggregateOptions options;
+    options.skip_nulls = true;
+    options.min_count = 1;
+
+    arrow::Datum result = arrow::compute::Mean(arrow::Datum(table->column(0)), options).ValueOrDie();
+    std::shared_ptr<arrow::Scalar> scalarResult = result.scalar();
+
+    if (!scalarResult->is_valid) {
+      throw std::runtime_error("Mean calculation resulted in a null value.");
+    }
+
+    double doubleMeanValue = std::static_pointer_cast<arrow::DoubleScalar>(scalarResult)->value;
+    int meanValue = static_cast<int>(doubleMeanValue);
+
+    return makeSingleColumnSingleRowTable("mean", meanValue);
+  }
+
+  std::shared_ptr<arrow::Table> ExecutionEndpoint::getSum(std::shared_ptr<arrow::Table> table) {
+    if (table->num_columns() != 1) {
+      throw std::invalid_argument("Requires exactly one input column");
+    }
+
+    arrow::compute::ScalarAggregateOptions options;
+    options.skip_nulls = true;
+    options.min_count = 1;
+
+    arrow::Datum result = arrow::compute::Sum(arrow::Datum(table->column(0))).ValueOrDie();
+    std::shared_ptr<arrow::Scalar> scalarResult = result.scalar();
+
+    if (!scalarResult->is_valid) {
+      throw std::runtime_error("Sum calculation resulted in a null value.");
+    }
+
+    double doubleSumValue = std::static_pointer_cast<arrow::DoubleScalar>(scalarResult)->value;
+    int sumValue = static_cast<int>(doubleSumValue);
+
+    return makeSingleColumnSingleRowTable("sum", sumValue);
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {    

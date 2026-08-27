@@ -19,6 +19,8 @@ namespace tql {
       std::shared_ptr<arrow::Table> getCount(std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> getMin(std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> getMax(std::shared_ptr<arrow::Table> table);
+      std::shared_ptr<arrow::Table> getAvg(std::shared_ptr<arrow::Table> table);
+      std::shared_ptr<arrow::Table> getSum(std::shared_ptr<arrow::Table> table);
       const arrow::StructScalar getMinMaxAggregate(std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table);
 

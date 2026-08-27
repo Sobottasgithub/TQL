@@ -49,6 +49,14 @@ namespace tql {
         return executionEndpoint.getMax(table);
     });
 
+    this->interpreter.setGetAvg([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getAvg(table);
+    });
+
+    this->interpreter.setGetSum([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
+        return executionEndpoint.getSum(table);
+    });
+
     this->interpreter.setGetRenamedTable([&executionEndpoint](std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {
         return executionEndpoint.getRenamedTable(originalColumnName, newColumnName, table);
     });
