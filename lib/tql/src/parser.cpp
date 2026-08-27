@@ -100,9 +100,9 @@ namespace tql {
         case States::As: {
           Expression asExpression;
           asExpression.token = lexer->next();
-          Expression previousAtom = currentOperatorExpression->expressions.back();
-          previousAtom.expressions.push_back(asExpression);
-          operandCache = &previousAtom.expressions.back();
+          Expression* previousAtom = &currentOperatorExpression->expressions.back();
+          previousAtom->expressions.push_back(asExpression);
+          operandCache = &previousAtom->expressions.back();
 
           if (lexer->peek().getType() == TokenType::Atom) {
             currentState = States::AfterAs;
@@ -191,6 +191,12 @@ namespace tql {
 
           if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == ")") {
             lexer->next();
+
+            if (lexer->peek().getType() == TokenType::AsOperator) {
+              currentState = States::As;
+              continue;  
+            }
+            
             currentState = States::AfterSelect;
             continue;
           }
