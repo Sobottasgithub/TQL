@@ -55,6 +55,14 @@ namespace tql {
     this->getMax = getMax;
   }
 
+  void Interpreter::setGetAvg(GetAvg getAvg) {
+    this->getAvg = getAvg;
+  }
+
+  void Interpreter::setGetSum(GetSum getSum) {
+    this->getSum = getSum;
+  }
+
   void Interpreter::setGetRenamedTable(GetRenamedTable getRenamedTable) {
     this->getRenamedTable = getRenamedTable;
   }
@@ -94,6 +102,8 @@ namespace tql {
       std::optional<Parser::Expression> optionalCountExpression = getExpressionByTokenType(TokenType::CountOperator, expression.expressions);
       std::optional<Parser::Expression> optionalMinExpression = getExpressionByTokenType(TokenType::MinOperator, expression.expressions);
       std::optional<Parser::Expression> optionalMaxExpression = getExpressionByTokenType(TokenType::MaxOperator, expression.expressions);
+      std::optional<Parser::Expression> optionalAvgExpression = getExpressionByTokenType(TokenType::AvgOperator, expression.expressions);
+      std::optional<Parser::Expression> optionalSumExpression = getExpressionByTokenType(TokenType::SumOperator, expression.expressions);
     
       if (optionalColumnsExpression.has_value()) {
         Parser::Expression columnsExpression = optionalColumnsExpression.value();
@@ -103,10 +113,16 @@ namespace tql {
         resultTable = interpretCount(countExpression, resultTable);
       } else if (optionalMinExpression.has_value()) {
         Parser::Expression minExpression = optionalMinExpression.value();
-        resultTable = interpretMin(minExpression, resultTable);
+        resultTable = interpretAggregate(minExpression, resultTable);
       } else if (optionalMaxExpression.has_value()) {
         Parser::Expression maxExpression = optionalMaxExpression.value();
-        resultTable = interpretMax(maxExpression, resultTable);
+        resultTable = interpretAggregate(maxExpression, resultTable);
+      } else if (optionalAvgExpression.has_value()) {
+        Parser::Expression avgExpression = optionalAvgExpression.value();
+        resultTable = interpretAggregate(avgExpression, resultTable);
+      } else if (optionalSumExpression.has_value()) {
+        Parser::Expression sumExpression = optionalSumExpression.value();
+        resultTable = interpretAggregate(sumExpression, resultTable);
       } else {
         this->logger->log(tablog::CRITICAL, "Missing columns or aggregate expression!");
         throw "Missing columns or aggregate expression!";
@@ -208,57 +224,6 @@ namespace tql {
     return resultTable;
   }
 
-  std::shared_ptr<arrow::Table> Interpreter::interpretMin(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
-    std::optional<Parser::Expression> optionalDistinctExpression = getExpressionByTokenType(TokenType::DistinctOperator, expression.expressions);
-    if (optionalDistinctExpression.has_value()) {
-      table = this->getDistinct(table);
-    }
-
-    std::optional<Parser::Expression> optionalAtomExpression = getExpressionByTokenType(TokenType::Atom, expression.expressions);
-     if (optionalAtomExpression.has_value()) {
-      Parser::Expression atomExpression = optionalAtomExpression.value();
-      table = interpretAtom(atomExpression, table);
-    } else {
-      this->logger->log(tablog::CRITICAL, "Missing columns expression!");
-      throw "Missing atom expression!";
-    }
-
-    std::shared_ptr<arrow::Table> resultTable = this->getMin(table);
-
-    std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions);
-    if (optionalAsExpression.has_value()) {
-      resultTable = interpretAs(resultTable->ColumnNames().at(0), optionalAsExpression.value(), resultTable);
-    }
-    
-    return resultTable;
-  }
-  
-  std::shared_ptr<arrow::Table> Interpreter::interpretMax(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
-    std::optional<Parser::Expression> optionalDistinctExpression = getExpressionByTokenType(TokenType::DistinctOperator, expression.expressions);
-    if (optionalDistinctExpression.has_value()) {
-      table = this->getDistinct(table);
-    }
-
-    std::optional<Parser::Expression> optionalAtomExpression = getExpressionByTokenType(TokenType::Atom, expression.expressions);
-     if (optionalAtomExpression.has_value()) {
-      Parser::Expression atomExpression = optionalAtomExpression.value();
-      table = interpretAtom(atomExpression, table);
-    } else {
-      this->logger->log(tablog::CRITICAL, "Missing columns expression!");
-      throw "Missing atom expression!";
-    }
-
-    std::shared_ptr<arrow::Table> resultTable = this->getMax(table);
-
-    std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions);
-    if (optionalAsExpression.has_value()) {
-      resultTable = interpretAs(resultTable->ColumnNames().at(0), optionalAsExpression.value(), resultTable);
-    }
-    
-    return resultTable;
-  }
-
-
   std::shared_ptr<arrow::Table> Interpreter::interpretAs(std::string originalColumnName, Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
     return this->getRenamedTable(originalColumnName, expression.expressions.at(0).token.getLexeme(), table);
   }
@@ -269,5 +234,40 @@ namespace tql {
         return expressions.at(index);
     }
     return {};
+  }
+
+  std::shared_ptr<arrow::Table> Interpreter::interpretAggregate(Parser::Expression expression, std::shared_ptr<arrow::Table> table) {
+    std::optional<Parser::Expression> optionalDistinctExpression = getExpressionByTokenType(TokenType::DistinctOperator, expression.expressions);
+    if (optionalDistinctExpression.has_value()) {
+      table = this->getDistinct(table);
+    }
+
+    std::optional<Parser::Expression> optionalAtomExpression = getExpressionByTokenType(TokenType::Atom, expression.expressions);
+     if (optionalAtomExpression.has_value()) {
+      Parser::Expression atomExpression = optionalAtomExpression.value();
+      table = interpretAtom(atomExpression, table);
+    } else {
+      this->logger->log(tablog::CRITICAL, "Missing columns expression!");
+      throw "Missing atom expression!";
+    }
+
+    std::shared_ptr<arrow::Table> resultTable;
+    TokenType expressionTokenType = expression.token.getType();
+    if (expressionTokenType == TokenType::MaxOperator) {
+      resultTable = this->getMax(table);
+    } else if (expressionTokenType == TokenType::MinOperator) {
+      resultTable = this->getMin(table);
+    } else if (expressionTokenType == TokenType::AvgOperator) {
+      resultTable = this->getAvg(table);
+    } else if (expressionTokenType == TokenType::SumOperator) {
+      resultTable = this->getSum(table);
+    }
+
+    std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions);
+    if (optionalAsExpression.has_value()) {
+      resultTable = interpretAs(resultTable->ColumnNames().at(0), optionalAsExpression.value(), resultTable);
+    }
+
+    return std::move(resultTable);
   }
 }
