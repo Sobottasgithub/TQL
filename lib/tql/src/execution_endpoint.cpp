@@ -148,7 +148,7 @@ namespace tql {
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getCount(std::shared_ptr<arrow::Table> table) {
-    return makeSingleColumnSingleRowTable("min", table->num_rows());
+    return makeSingleColumnSingleRowTable("count", table->num_rows());
   }
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getMin(std::shared_ptr<arrow::Table> table) {
@@ -156,7 +156,7 @@ namespace tql {
     std::shared_ptr<arrow::Scalar> minScalar = minMaxScalar.field("min").ValueOrDie();
     int minValue = std::static_pointer_cast<arrow::Int64Scalar>(minScalar)->value;
     
-    return makeSingleColumnSingleRowTable("max", minValue);
+    return makeSingleColumnSingleRowTable("min", minValue);
   }
   
   std::shared_ptr<arrow::Table> ExecutionEndpoint::getMax(std::shared_ptr<arrow::Table> table) {
