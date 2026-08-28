@@ -31,6 +31,7 @@ namespace tql {
         Column,
         AfterColumn,
         As,
+        AggregateAs,
         AfterAs,
         Distinct,
         Aggregate,

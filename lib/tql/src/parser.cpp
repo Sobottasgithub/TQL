@@ -113,6 +113,21 @@ namespace tql {
           }
         }
 
+        case States::AggregateAs: {
+          Expression asExpression;
+          asExpression.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(asExpression);
+          operandCache = &currentOperatorExpression->expressions.back();
+
+          if (lexer->peek().getType() == TokenType::Atom) {
+            currentState = States::AfterAs;
+            continue;
+          } else {
+            currentState = States::Invalid;
+            continue;
+          }
+        }
+
         case States::AfterAs: {
           Expression atomExpression;
           atomExpression.token = lexer->next();
@@ -193,7 +208,7 @@ namespace tql {
             lexer->next();
 
             if (lexer->peek().getType() == TokenType::AsOperator) {
-              currentState = States::As;
+              currentState = States::AggregateAs;
               continue;  
             }
             

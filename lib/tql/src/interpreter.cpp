@@ -4,6 +4,7 @@
 
 #include <arrow/table.h>
 #include <stdexcept>
+#include <string>
 #include <tablog.h>
 #include <memory>
 #include <optional>
