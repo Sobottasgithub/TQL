@@ -38,6 +38,15 @@ namespace tql {
 
   std::shared_ptr<arrow::Table> ExecutionEndpoint::openFile(std::string filePath) {
     if (std::filesystem::exists(filePath)) {
+      for (int index = 0; index < currentFiles.size(); index++) {
+        CurrentFile* currentFile = &currentFiles.at(index);
+
+        if (currentFile->filePath == std::filesystem::path(filePath)
+            && currentFile->lastWriteTime == std::filesystem::last_write_time(filePath)) {
+          return currentFile->table;
+        }
+      }
+      
       arrow::io::IOContext ioContext = arrow::io::default_io_context();
 
       arrow::Result<std::shared_ptr<arrow::io::ReadableFile>> maybeFile = arrow::io::ReadableFile::Open(filePath);
@@ -64,7 +73,14 @@ namespace tql {
         throw "Error while read table from CSV file!";
       }
       std::shared_ptr<arrow::Table> table = maybeTable.ValueOrDie();
-      return std::move(table);
+
+      CurrentFile currentFile;
+      currentFile.filePath = std::filesystem::path(filePath);
+      currentFile.lastWriteTime = std::filesystem::last_write_time(filePath);
+      currentFile.table = std::move(table);
+      currentFiles.push_back(currentFile);
+
+      return currentFile.table;
     } else {
       throw std::invalid_argument( "Invalid filepath!" );
       return nullptr;
