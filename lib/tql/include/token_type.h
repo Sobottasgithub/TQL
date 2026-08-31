@@ -24,7 +24,7 @@ namespace tql {
     
     FromOperator,
 
-    // Where,
+    // Where
     WhereOperator,
     EqualOperator,
     GreaterOperator,
