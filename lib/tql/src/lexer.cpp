@@ -24,7 +24,7 @@ namespace tql {
     for (int index = 0; index < query.size(); ++index) {
       std::string currentChar(1, query[index]);
       // Create atom
-      if (currentChar.compare(" ") == 0) {
+      if (!currentChar.compare(" ")) {
         if (currentToken.size() == 0) {
           currentToken = "";
           continue;
@@ -134,43 +134,43 @@ namespace tql {
 
   TokenType Lexer::getTokenStringAsType(std::string tokenString) {
     std::transform(tokenString.begin(), tokenString.end(), tokenString.begin(), ::toupper);
-    if (tokenString.compare("SELECT") == 0)
+    if (!tokenString.compare("SELECT"))
       return TokenType::SelectOperator;
-    else if (tokenString.compare("DISTINCT") == 0)
+    else if (!tokenString.compare("DISTINCT"))
       return TokenType::DistinctOperator;
-    else if (tokenString.compare("AS") == 0)
+    else if (!tokenString.compare("AS"))
       return TokenType::AsOperator;
-    else if (tokenString.compare("COUNT") == 0)
+    else if (!tokenString.compare("COUNT"))
       return TokenType::CountOperator;
-    else if (tokenString.compare("MIN") == 0)
+    else if (!tokenString.compare("MIN"))
       return TokenType::MinOperator;
-    else if (tokenString.compare("MAX") == 0)
+    else if (!tokenString.compare("MAX"))
       return TokenType::MaxOperator;
-    else if (tokenString.compare("SUM") == 0)
+    else if (!tokenString.compare("SUM"))
       return TokenType::SumOperator;
-    else if (tokenString.compare("AVG") == 0)
+    else if (!tokenString.compare("AVG"))
       return TokenType::AvgOperator;
-    else if (tokenString.compare("FROM") == 0)
+    else if (!tokenString.compare("FROM"))
       return TokenType::FromOperator;
-    else if (tokenString.compare("*") == 0)
+    else if (!tokenString.compare("*"))
       return TokenType::All;
-    else if (tokenString.compare("WHERE") == 0)
+    else if (!tokenString.compare("WHERE"))
       return TokenType::WhereOperator;
-    else if (tokenString.compare("=") == 0)
+    else if (!tokenString.compare("="))
       return TokenType::EqualOperator;
-    else if (tokenString.compare("!=") == 0)
+    else if (!tokenString.compare("!="))
       return TokenType::UnequalOperator;
-    else if (tokenString.compare(">") == 0)
+    else if (!tokenString.compare(">"))
       return TokenType::GreaterOperator;
-    else if (tokenString.compare("<") == 0)
+    else if (!tokenString.compare("<"))
       return TokenType::SmallerOperator;
-    else if (tokenString.compare(">=") == 0)
+    else if (!tokenString.compare(">="))
       return TokenType::GreaterEqualOperator;
-    else if (tokenString.compare("<=") == 0)
+    else if (!tokenString.compare("<="))
       return TokenType::SmallerEqualOperator;
-    else if (tokenString.compare("(") == 0
-             || tokenString.compare(")") == 0
-             || tokenString.compare(",") == 0)
+    else if (!tokenString.compare("(")
+             || !tokenString.compare(")")
+             || !tokenString.compare(","))
       return TokenType::Delimiter;
     else
       return TokenType::Invalid;

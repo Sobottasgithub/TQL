@@ -101,22 +101,22 @@ namespace tql {
     arrow::compute::Expression field = arrow::compute::field_ref(columnName);
     arrow::compute::Expression literal = arrow::compute::literal(convertedScalar);
 
-    if (operatorName.compare("<") == 0) {
+    if (!operatorName.compare("<")) {
       arrow::compute::Expression filterExpression = arrow::compute::less(field, literal);
       return computeWhereFunction(filterExpression, table);
-    } else if (operatorName.compare(">") == 0) {
+    } else if (!operatorName.compare(">")) {
       arrow::compute::Expression filterExpression = arrow::compute::greater(field, literal);
       return computeWhereFunction(filterExpression, table);
-    } else if (operatorName.compare(">=") == 0) {
+    } else if (!operatorName.compare(">=")) {
       arrow::compute::Expression filterExpression = arrow::compute::greater_equal(field, literal);
       return computeWhereFunction(filterExpression, table);
-    } else if (operatorName.compare("<=") == 0) {
+    } else if (!operatorName.compare("<=")) {
       arrow::compute::Expression filterExpression = arrow::compute::less_equal(field, literal);
       return computeWhereFunction(filterExpression, table);
-    } else if (operatorName.compare("=") == 0) {
+    } else if (!operatorName.compare("=")) {
       arrow::compute::Expression filterExpression = arrow::compute::equal(field, literal);
       return computeWhereFunction(filterExpression, table);
-    } else if (operatorName.compare("!=") == 0) {
+    } else if (!operatorName.compare("!=")) {
       arrow::compute::Expression filterExpression = arrow::compute::not_equal(field, literal);
       return computeWhereFunction(filterExpression, table);
     } else {
