@@ -96,16 +96,20 @@
           default = self.packages.${system}.lib;
         };
 
-      devShells.${system}.default = pkgs.mkShell {
-        packages = commonDeps ++ [
-          pkgs.bridge-utils
-          pkgs.clang-tools
+      devShells.${system}.default =
+        let
+          devPackages = (with pkgs; [
+            bridge-utils
+            clang-tools
 
-          pkgs.man-db
-          pkgs.man-pages
-          pkgs.man-pages-posix
-          pkgs.stdman
-        ];
+            man-db
+            man-pages
+            man-pages-posix
+            stdman
+          ]);
+        in
+        pkgs.mkShell {
+        packages = commonDeps ++ devPackages;
 
         extraOutputsToInstall = [ "man" "doc" ];
 
