@@ -133,7 +133,7 @@ namespace tql {
   }
 
   TokenType Lexer::getTokenStringAsType(std::string tokenString) {
-    std::transform(tokenString.begin(), tokenString.end(), tokenString.begin(), ::toupper);
+    // std::transform(tokenString.begin(), tokenString.end(), tokenString.begin(), ::toupper);
     if (!tokenString.compare("SELECT"))
       return TokenType::SelectOperator;
     else if (!tokenString.compare("DISTINCT"))
