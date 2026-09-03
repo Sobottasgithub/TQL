@@ -19,7 +19,7 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
 
-      version = "0.0.1";
+      version = "0.1.1";
 
       libtablog = tablog.packages.${system}.lib;
 
@@ -96,13 +96,25 @@
           default = self.packages.${system}.lib;
         };
 
-      devShells.${system}.default = pkgs.mkShell {
-        packages = commonDeps ++ [
-          pkgs.bridge-utils
-          pkgs.clang-tools
-        ];
+      devShells.${system}.default =
+        let
+          devPackages = (with pkgs; [
+            bridge-utils
+            clang-tools
+
+            man-db
+            man-pages
+            man-pages-posix
+            stdman
+          ]);
+        in
+        pkgs.mkShell {
+        packages = commonDeps ++ devPackages;
+
+        extraOutputsToInstall = [ "man" "doc" ];
 
         shellHook = ''
+          export MANPATH="${pkgs.man-pages}/share/man:${pkgs.man-pages-posix}/share/man:$MANPATH"
           git status
         '';
       };

@@ -17,7 +17,6 @@ namespace tql {
     this->logger = logger;
   }
 
-
   Parser::Expression Parser::parse(Lexer lexer) {
     Expression expression;
     if (lexer.peek().getType() == TokenType::SelectOperator) {
@@ -33,6 +32,7 @@ namespace tql {
   Parser::Expression Parser::parseSelect(Lexer* lexer) {
     Expression expression;
     Expression* currentOperatorExpression = nullptr;
+    Expression* operandCache = nullptr;
 
     Parser::States currentState = States::AfterSelect;
 
@@ -55,10 +55,8 @@ namespace tql {
             currentState = States::Aggregate;
           } else if (currentType == TokenType::FromOperator) {
             currentState = States::From;
-          } else if (currentType == TokenType::Eof) {
-            logger->log(tablog::DEBUG, "EOF");
-            // Return when end of File is reached
-            return expression;
+          } else if (currentType == TokenType::WhereOperator) {
+            currentState = States::Where;
           } else {
             // Return inner Select
             return expression;
@@ -82,12 +80,67 @@ namespace tql {
           columnAtom.token = lexer->next();
           currentOperatorExpression->expressions.push_back(columnAtom);
 
+          currentState = States::AfterColumn;
+        }
+
+        case States::AfterColumn: {
           if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == ",") {
             lexer->next();
             currentState = States::Column;
             continue;
+          } else if (lexer->peek().getType() == TokenType::AsOperator) {
+            currentState = States::As;
+            continue;
           } else {
             currentState = States::AfterSelect;
+            continue;
+          }
+        }
+
+        case States::As: {
+          Expression asExpression;
+          asExpression.token = lexer->next();
+          Expression* previousAtom = &currentOperatorExpression->expressions.back();
+          previousAtom->expressions.push_back(asExpression);
+          operandCache = &previousAtom->expressions.back();
+
+          if (lexer->peek().getType() == TokenType::Atom) {
+            currentState = States::AfterAs;
+            continue;
+          } else {
+            currentState = States::Invalid;
+            continue;
+          }
+        }
+
+        case States::AggregateAs: {
+          Expression asExpression;
+          asExpression.token = lexer->next();
+          currentOperatorExpression->expressions.push_back(asExpression);
+          operandCache = &currentOperatorExpression->expressions.back();
+
+          if (lexer->peek().getType() == TokenType::Atom) {
+            currentState = States::AfterAs;
+            continue;
+          } else {
+            currentState = States::Invalid;
+            continue;
+          }
+        }
+
+        case States::AfterAs: {
+          Expression atomExpression;
+          atomExpression.token = lexer->next();
+          operandCache->expressions.push_back(atomExpression);
+          operandCache = nullptr;
+
+          if ((lexer->peek().getType() == TokenType::Delimiter
+              && lexer->peek().getLexeme() == ",")
+              || lexer->peek().getType() == TokenType::FromOperator) {
+            currentState = States::AfterColumn;
+            continue;
+          } else {
+            currentState = States::Invalid;
             continue;
           }
         }
@@ -153,6 +206,12 @@ namespace tql {
 
           if (lexer->peek().getType() == TokenType::Delimiter && lexer->peek().getLexeme() == ")") {
             lexer->next();
+
+            if (lexer->peek().getType() == TokenType::AsOperator) {
+              currentState = States::AggregateAs;
+              continue;  
+            }
+            
             currentState = States::AfterSelect;
             continue;
           }
@@ -205,6 +264,67 @@ namespace tql {
             currentState = States::Invalid;
           }
           continue;
+        }
+
+        case States::Where: {
+          Expression whereExpression;
+          whereExpression.token = lexer->next();
+          expression.expressions.push_back(whereExpression);
+          currentOperatorExpression = &expression.expressions.back();
+
+          if (lexer->peek().getType() == TokenType::Atom) {
+            currentState = States::AfterWhereInfixAtom;
+          } else {
+            currentState = States::AfterSelect;
+          }
+        }
+
+        case States::AfterWhereInfixAtom: {
+          if (operandCache == nullptr) {
+            // Static here because we only want to store the pointer
+            // without creating a dangling pointer
+            static Expression atomExpression;
+            atomExpression.token = lexer->next();
+            operandCache = &atomExpression;
+            TokenType peekType = lexer->peek().getType();
+            if (peekType == TokenType::EqualOperator ||
+                peekType == TokenType::GreaterOperator ||
+                peekType == TokenType::SmallerOperator ||
+                peekType == TokenType::GreaterEqualOperator ||
+                peekType == TokenType::SmallerEqualOperator ||
+                peekType == TokenType::UnequalOperator) {
+              currentState = States::AfterWhereInfixOperator;
+            } else {
+              currentState = States::Invalid;
+            }
+            continue;
+          } else if (operandCache->token.getType() != TokenType::Atom) {
+            Expression atomExpression;
+            atomExpression.token = lexer->next();
+            operandCache->expressions.push_back(atomExpression);
+            operandCache = nullptr;
+            currentState = States::Where;
+            continue;
+          } else {
+            currentState = States::Invalid;
+            continue;
+          }
+        }
+
+        case States::AfterWhereInfixOperator: {
+          Expression infixOperator;
+          infixOperator.token = lexer->next();
+          infixOperator.expressions.push_back(*operandCache);
+          currentOperatorExpression->expressions.push_back(infixOperator);
+          operandCache = &currentOperatorExpression->expressions.back();
+
+          if (lexer->peek().getType() == TokenType::Atom) {
+            currentState = States::AfterWhereInfixAtom;
+            continue;
+          } else {
+            currentState = States::Invalid;
+            continue;
+          }
         }
         
         case States::Invalid: {

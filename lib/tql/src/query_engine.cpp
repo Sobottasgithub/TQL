@@ -4,7 +4,6 @@
 #include "../include/token_type.h"
 #include "../include/parser.h"
 #include "../include/interpreter.h"
-#include "../include/execution_endpoint.h"
 
 #include <arrow/type.h>
 #include <string>
@@ -18,35 +17,45 @@ namespace tql {
     std::shared_ptr<tablog::Tablog> logger = std::make_shared<tablog::Tablog>();
     logger->configure("QueryEngine", true);
     this->logger = logger;
-
-    ExecutionEndpoint executionEndpoint;
       
-    this->interpreter.setOpenFile([&executionEndpoint](std::string filePath) {
-        return executionEndpoint.openFile(filePath);
+    this->interpreter.setOpenFile([this](std::string filePath) {
+        return this->executionEndpoint.openFile(filePath);
     });
 
-    this->interpreter.setSelectColumns([&executionEndpoint](std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
-        return executionEndpoint.selectColumns(columnNames, table);
+    this->interpreter.setGetWhere([this](std::string operatorName, std::string columnName, std::string compareValue, std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getWhere(operatorName, columnName, compareValue, table);
     });
 
-    this->interpreter.setGetDistinct([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
-        return executionEndpoint.getDistinct(table);
+    this->interpreter.setSelectColumns([this](std::vector<std::string> columnNames, std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.selectColumns(columnNames, table);
     });
 
-    this->interpreter.setGetCount([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
-        return executionEndpoint.getCount(table);
+    this->interpreter.setGetDistinct([this](std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getDistinct(table);
     });
 
-    this->interpreter.setGetMin([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
-        return executionEndpoint.getMin(table);
+    this->interpreter.setGetCount([this](std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getCount(table);
     });
 
-    this->interpreter.setGetMax([&executionEndpoint](std::shared_ptr<arrow::Table> table) {
-        return executionEndpoint.getMax(table);
+    this->interpreter.setGetMin([this](std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getMin(table);
     });
 
-    this->interpreter.setGetRenamedTable([&executionEndpoint](std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {
-        return executionEndpoint.getRenamedTable(originalColumnName, newColumnName, table);
+    this->interpreter.setGetMax([this](std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getMax(table);
+    });
+
+    this->interpreter.setGetAvg([this](std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getAvg(table);
+    });
+
+    this->interpreter.setGetSum([this](std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getSum(table);
+    });
+
+    this->interpreter.setGetRenamedTable([this](std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table) {
+        return this->executionEndpoint.getRenamedTable(originalColumnName, newColumnName, table);
     });
   }
 
@@ -72,19 +81,10 @@ namespace tql {
   }
 
   void QueryEngine::displayExpressionTree(Parser::Expression expression) {
-      // Post order
-      if (expression.token.getType() == TokenType::Columns) {
-          for (int index = 0; index < expression.expressions.size(); index++) {
-              displayExpressionTree(expression.expressions[index]);
-          }
-      } else {
-          if (expression.expressions.size() >= 2) // Right side
-              displayExpressionTree(expression.expressions[1]);
-          
-          if (expression.expressions.size() >= 1) // Left side
-              displayExpressionTree(expression.expressions[0]);
+      for (int index = 0; index < expression.expressions.size(); index++) {
+          displayExpressionTree(expression.expressions[index]);
       }
-
+ 
       if (expression.token.getType() == TokenType::Atom)
           this->logger->log(tablog::DEBUG, expression.token.getTypeAsString() + " -> " + expression.token.getLexeme());
       else

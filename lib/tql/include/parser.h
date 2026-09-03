@@ -29,12 +29,19 @@ namespace tql {
         AfterSelect,
         All,
         Column,
+        AfterColumn,
+        As,
+        AggregateAs,
+        AfterAs,
         Distinct,
         Aggregate,
         AggregateDistinct,
         AfterAggregate,
         From,
         AfterFrom,
+        Where,
+        AfterWhereInfixAtom,
+        AfterWhereInfixOperator,
         Invalid
       };
 

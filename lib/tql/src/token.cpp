@@ -42,6 +42,20 @@ namespace tql {
         return "AsOperator";
       case TokenType::FromOperator:
         return "From";
+      case TokenType::WhereOperator:
+        return "Where";
+      case TokenType::EqualOperator:
+        return "=";
+      case TokenType::GreaterOperator:
+        return ">";
+      case TokenType::SmallerOperator:
+        return "<";
+      case TokenType::GreaterEqualOperator:
+        return ">=";
+      case TokenType::SmallerEqualOperator:
+        return "<=";
+      case TokenType::UnequalOperator:
+        return "!=";
       case TokenType::Operator:
         return "Operator";
       case TokenType::Invalid:
