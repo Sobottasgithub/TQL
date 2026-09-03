@@ -32,6 +32,7 @@ int main() {
             std::free(query);
         } catch (const std::invalid_argument& invalidArgument) {
             std::cout << "Error: " << invalidArgument.what() << std::endl;
+            std::free(query);
         }
     }
     
