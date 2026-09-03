@@ -262,8 +262,9 @@ namespace tql {
       resultTable = this->getAvg(table);
     } else if (expressionTokenType == TokenType::SumOperator) {
       resultTable = this->getSum(table);
+    } else {
+      throw std::invalid_argument("Unsupported aggregate operator: " + expression.token.getTypeAsString());
     }
-
     std::optional<Parser::Expression> optionalAsExpression = getExpressionByTokenType(TokenType::AsOperator, expression.expressions);
     if (optionalAsExpression.has_value()) {
       resultTable = interpretAs(resultTable->ColumnNames().at(0), optionalAsExpression.value(), resultTable);
