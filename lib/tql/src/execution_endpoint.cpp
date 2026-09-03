@@ -32,7 +32,7 @@ namespace tql {
 
     arrow::Status status = arrow::compute::Initialize();
     if (!status.ok()) {
-      throw "Unable to initialize Arrow compute";
+      throw std::runtime_error(status.ToString());
     }
   }
 
