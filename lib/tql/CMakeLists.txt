@@ -19,7 +19,7 @@ target_link_libraries(tql PRIVATE tablog)
 find_package(Arrow REQUIRED)
 find_package(ArrowCompute REQUIRED)
 find_package(ArrowAcero REQUIRED)
-target_link_libraries(tql PRIVATE
+target_link_libraries(tql PUBLIC
     Arrow::arrow_shared
     ArrowCompute::arrow_compute_shared
     ArrowAcero::arrow_acero_shared
