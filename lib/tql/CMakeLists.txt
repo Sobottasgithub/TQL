@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 
+find_package(Arrow REQUIRED)
+find_package(ArrowCompute REQUIRED)
+find_package(ArrowAcero REQUIRED)
+
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
 # file(GLOB_RECURSE HEADERS "include/*.h")
 
@@ -16,9 +20,6 @@ target_include_directories(tql PUBLIC
 )
 
 target_link_libraries(tql PRIVATE tablog)
-find_package(Arrow REQUIRED)
-find_package(ArrowCompute REQUIRED)
-find_package(ArrowAcero REQUIRED)
 target_link_libraries(tql PUBLIC
     Arrow::arrow_shared
     ArrowCompute::arrow_compute_shared
