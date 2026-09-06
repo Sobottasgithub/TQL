@@ -19,7 +19,7 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
 
-      version = "0.1.2";
+      version = "0.1.3";
 
       libtablog = tablog.packages.${system}.lib;
 
