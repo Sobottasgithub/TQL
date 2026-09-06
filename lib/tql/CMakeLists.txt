@@ -19,7 +19,7 @@ target_include_directories(tql PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(tql PRIVATE tablog)
+target_link_libraries(tql PUBLIC tablog)
 target_link_libraries(tql PUBLIC
     Arrow::arrow_shared
     ArrowCompute::arrow_compute_shared
