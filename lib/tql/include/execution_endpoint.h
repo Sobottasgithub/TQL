@@ -25,7 +25,7 @@ namespace tql {
       const arrow::StructScalar getMinMaxAggregate(std::shared_ptr<arrow::Table> table);
       std::shared_ptr<arrow::Table> getRenamedTable(std::string originalColumnName, std::string newColumnName, std::shared_ptr<arrow::Table> table);
 
-    private:
+    protected:
       std::shared_ptr<tablog::Tablog> logger;
 
       struct CurrentFile {
